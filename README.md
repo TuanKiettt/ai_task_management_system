@@ -56,7 +56,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 - Node.js 18+ 
 - MySQL database
 - Python 3.8+ (for AI features)
-- `.env.local` file (create from examples below)
+- `.env` file (create from examples below)
 
 ### Installation
 
