@@ -58,8 +58,8 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/TuanKiettt/ai_task_management_system.git
-   cd ai_task_management_system
+   git clone <repository-url>
+   cd recreate-attached-ui
    ```
 
 2. **Install dependencies**
@@ -81,7 +81,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 5. **Install Python dependencies for AI features**
    ```bash
-   pip install -r python/requirements.txt
+   pip install -r requirements.txt
    ```
 
 ### Development
@@ -93,33 +93,6 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 2. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## AI Model Setup
-
-**Important**: AI models are excluded from the repository to keep it lightweight. You need to download them manually for AI functionality to work.
-
-### Download Models from Google Drive
-
-1. **Download the model file**: https://drive.google.com/file/d/1PEaMPJQ0gei4PqXdPwHUmuckBNSQdtnm/view?usp=sharing
-
-2. **Extract the ZIP file** to get the model folders
-
-3. **Copy the extracted folders** to:
-   ```
-   python/models/
-
-   ```
-
-### Start AI Server
-
-After downloading models, start the AI server:
-```bash
-python python/ai_server.py
-```
-
-The AI server will start on `http://localhost:8000` by default.
-
-**Note**: Without the models, the application will still run but AI features will not work properly.
 
 ### Database Management
 
@@ -133,6 +106,8 @@ Train the AI model with custom data:
 ```bash
 npm run ai-train
 ```
+
+This will run the `train_multiwoz.py` script to train models with your custom dataset.
 
 ## Project Structure
 

@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "ai-train": "python ai-training-script.py"
+    "ai-train": "python train_multiwoz.py"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
