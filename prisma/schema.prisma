@@ -1,0 +1,580 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Industry {
+  education
+  corporate
+  creative
+  medical
+}
+
+enum CourseStatus {
+  completed
+  in_progress
+  assigned
+  recommended
+}
+
+enum TaskStatus {
+  new
+  processing
+  done
+  urgent
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+  Urgent
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum NotificationType {
+  info
+  success
+  warning
+  error
+}
+
+enum AutomationRuleStatus {
+  active
+  draft
+  archived
+}
+
+enum ReportType {
+  performance
+  productivity
+  engagement
+  custom
+}
+
+enum ReportFormat {
+  pdf
+  excel
+  dashboard
+}
+
+enum AutomationRuleCategory {
+  task
+  deadline
+  email
+  project
+  custom
+}
+
+enum WorkspaceRole {
+  owner
+  admin
+  member
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
+enum Visibility {
+  public
+  private
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  fullName      String
+  industry      Industry
+  avatar        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tasks         Task[]
+  conversations Conversation[]
+  notifications Notification[]
+  settings      UserSettings?
+  courses       Course[]
+  events        Event[]
+  timetableEntries TimetableEntry[]
+  automationRules AutomationRule[]
+  reports       Report[]
+  guestLinks    GuestLink[]
+  workspaces    Workspace[]
+  workspaceMemberships WorkspaceMember[]
+  invitationsSent WorkspaceInvitation[] @relation("InvitationsSent")
+  comments      Comment[]
+  attachments   Attachment[]
+  reactions     Reaction[]
+  createdChats  WorkspaceChat[] @relation("ChatCreator")
+  chatMessages  WorkspaceChatMessage[]
+  chatMemberships WorkspaceChatMember[]
+
+  @@map("users")
+}
+
+model UserSettings {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  notifications     Boolean  @default(true)
+  emailUpdates      Boolean  @default(true)
+  language          String   @default("en")
+  theme             String   @default("dark")
+  privacyMode       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  category      String
+  priority      TaskPriority
+  status        TaskStatus   @default(new)
+  estimatedTime String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  workspaceId   String?
+  isRecurring   Boolean?     @default(false)
+  assignedTo    String?      // User ID of assigned person
+
+  // Relations
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  comments      Comment[]
+  attachments   Attachment[]
+  reactions     Reaction[]
+  subtasks      Subtask[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([workspaceId])
+  @@index([assignedTo])
+  @@map("tasks")
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  title         String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model Message {
+  id              String      @id @default(cuid())
+  content         String
+  role            MessageRole
+  timestamp       DateTime    @default(now())
+
+  // Relations
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  title         String
+  message       String
+  type          NotificationType @default(info)
+  category      String?          @default("system")
+  actionUrl     String?
+  read          Boolean          @default(false)
+  timestamp     DateTime         @default(now())
+
+  // Relations
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
+}
+
+// ==================== LOOKUP TABLES ====================
+
+model Category {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  color         String?
+  icon          String?
+  createdAt     DateTime @default(now())
+
+  @@map("categories")
+}
+
+model TimetableEntry {
+  id            String   @id @default(cuid())
+  userId        String
+  dayOfWeek     Int      // 0-6 (Sunday-Saturday)
+  startTime     String   // "09:00"
+  endTime       String   // "10:00"
+  subject       String
+  location      String?
+  color         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("timetable_entries")
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  title         String
+  category      String
+  progress      Int      @default(0) // 0-100
+  duration      String   // "2h 30m"
+  status        CourseStatus @default(assigned)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("courses")
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  description   String?
+  date          DateTime
+  time          String?
+  location      String?
+  type          String   @default("meeting")
+  attendees     Int?
+  color         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@map("events")
+}
+
+// ==================== AUTOMATION & REPORTS MODELS ====================
+
+model AutomationRule {
+  id            String                @id @default(cuid())
+  name          String
+  description   String
+  trigger       String
+  action        String
+  isActive      Boolean               @default(true)
+  category      AutomationRuleCategory
+  executions    Int                   @default(0)
+  lastRun       DateTime?
+  status        AutomationRuleStatus  @default(active)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  // Relations
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("automation_rules")
+}
+
+model Report {
+  id            String        @id @default(cuid())
+  name          String
+  type          ReportType
+  description   String
+  lastGenerated DateTime?
+  schedule      String        // "Weekly", "Monthly", etc.
+  format        ReportFormat
+  status        String        @default("active")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reports")
+}
+
+model GuestLink {
+  id            String    @id @default(cuid())
+  title         String
+  url           String    @unique
+  description   String
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  accessCount   Int       @default(0)
+  maxAccess     Int?
+  password      String?
+  permissions   String    @default("view") // JSON string: ["view", "comment", "download"]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("guest_links")
+}
+
+// ==================== WORKSPACE & COLLABORATION MODELS ====================
+
+model Workspace {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  ownerId         String
+  settings        String   @default("{}") // JSON string for workspace settings
+  billingInfo     String?  @default("{}") // JSON string for billing info
+  defaultPermissions String @default("[]") // JSON string for default permissions
+  securitySettings String @default("{}") // JSON string for security settings
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members         WorkspaceMember[]
+  tasks           Task[]
+  invitations     WorkspaceInvitation[]
+  chats           WorkspaceChat[]
+
+  @@index([ownerId])
+  @@index([isActive])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  userId        String
+  role          WorkspaceRole @default(member)
+  permissions   String       @default("[]") // JSON string for permissions
+  invitedAt     DateTime     @default(now())
+  joinedAt      DateTime?
+  isActive      Boolean      @default(true)
+
+  // Relations
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+model WorkspaceInvitation {
+  id            String           @id @default(cuid())
+  workspaceId   String
+  invitedEmail  String
+  invitedBy     String
+  role          WorkspaceRole    @default(member)
+  token         String           @unique
+  status        InvitationStatus @default(pending)
+  expiresAt     DateTime
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter       User             @relation("InvitationsSent", fields: [invitedBy], references: [id])
+
+  @@index([workspaceId])
+  @@index([invitedEmail])
+  @@index([token])
+  @@map("workspace_invitations")
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  taskId        String
+  userId        String
+  content       String
+  mentions      String   @default("[]") // JSON string for mentioned user IDs
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  taskId        String
+  userId        String
+  fileName      String
+  fileSize      Int
+  fileType      String
+  filePath      String
+  uploadedAt    DateTime @default(now())
+
+  // Relations
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("attachments")
+}
+
+model Reaction {
+  id            String   @id @default(cuid())
+  taskId        String
+  userId        String
+  emoji         String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, emoji])
+  @@index([taskId])
+  @@index([userId])
+  @@map("reactions")
+}
+
+model Subtask {
+  id            String   @id @default(cuid())
+  parentTaskId  String
+  title         String
+  completed     Boolean  @default(false)
+  position      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  parentTask    Task     @relation(fields: [parentTaskId], references: [id], onDelete: Cascade)
+
+  @@index([parentTaskId])
+  @@map("subtasks")
+}
+
+// ==================== WORKSPACE CHAT MODELS ====================
+
+model WorkspaceChat {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  name          String   @default("General Chat")
+  description   String?
+  isPrivate     Boolean  @default(false)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator       User      @relation("ChatCreator", fields: [createdBy], references: [id])
+  messages      WorkspaceChatMessage[]
+  members       WorkspaceChatMember[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@map("workspace_chats")
+}
+
+model WorkspaceChatMessage {
+  id            String   @id @default(cuid())
+  chatId        String
+  userId        String
+  content       String
+  messageType   String   @default("text") // text, image, file, system
+  replyToId     String?  // For threaded replies
+  attachments   String?  @default("[]") // JSON array of attachment info
+  reactions     String?  @default("{}") // JSON object of emoji reactions
+  isEdited      Boolean  @default(false)
+  editedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  chat          WorkspaceChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo       WorkspaceChatMessage? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies       WorkspaceChatMessage[] @relation("MessageReplies")
+
+  @@index([chatId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("workspace_chat_messages")
+}
+
+model WorkspaceChatMember {
+  id            String   @id @default(cuid())
+  chatId        String
+  userId        String
+  role          String   @default("member") // admin, member
+  lastReadAt    DateTime?
+  isMuted       Boolean  @default(false)
+  joinedAt      DateTime @default(now())
+
+  // Relations
+  chat          WorkspaceChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+  @@map("workspace_chat_members")
+}
