@@ -106,8 +106,8 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 3. **Copy the extracted folders** to:
    ```
-   python/models/task_category_model_final/
-   python/models/task_priority_model_final/
+   python/models/
+
    ```
 
 ### Start AI Server
@@ -194,55 +194,6 @@ NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
 AI_SERVICE_ENDPOINT=...
 ```
-
-## AI Model Setup
-
-The AI models are stored separately to keep the repository lightweight. Follow these steps to set up the AI functionality:
-
-### Automatic Download (Recommended)
-
-```bash
-# Download all required AI models
-npm run download-models
-
-# Or run the script directly
-node scripts/download-models.js
-```
-
-### Manual Download
-
-If automatic download fails, you can download models manually:
-
-1. **Task Category Model**
-   - Download from: [Model Repository Link]
-   - Extract to: `python/models/task_category_model_final/`
-
-2. **Task Priority Model**
-   - Download from: [Model Repository Link]
-   - Extract to: `python/models/task_priority_model_final/`
-
-### Verify Installation
-
-```bash
-# Check if models are properly installed
-node scripts/download-models.js --check
-```
-
-### Python Dependencies
-
-After downloading models, install Python dependencies:
-
-```bash
-pip install -r python/requirements.txt
-```
-
-### Start AI Server
-
-```bash
-python python/ai_server.py
-```
-
-The AI server will start on `http://localhost:8000` by default.
 
 ## Contributing
 
