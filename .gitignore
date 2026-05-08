@@ -41,3 +41,24 @@ test-*.js
 # Local development
 *.local.js
 *.dev.js
+
+# AI Models and large files
+python/models/
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.pkl
+*.pickle
+
+# Large datasets and training files
+*.csv
+*.jsonl
+*.parquet
+data/
+datasets/
+
+# Model artifacts
+checkpoints/
+logs/
+wandb/
