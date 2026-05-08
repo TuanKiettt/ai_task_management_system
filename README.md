@@ -107,6 +107,8 @@ Train the AI model with custom data:
 npm run ai-train
 ```
 
+This will run the `train_multiwoz.py` script to train models with your custom dataset.
+
 ## Project Structure
 
 ```
