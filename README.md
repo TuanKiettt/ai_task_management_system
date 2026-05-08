@@ -58,8 +58,8 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd recreate-attached-ui
+   git clone https://github.com/TuanKiettt/ai_task_management_system.git
+   cd ai_task_management_system
    ```
 
 2. **Install dependencies**
@@ -81,7 +81,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 5. **Install Python dependencies for AI features**
    ```bash
-   pip install -r requirements.txt
+   pip install -r python/requirements.txt
    ```
 
 ### Development
@@ -93,6 +93,33 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 2. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## AI Model Setup
+
+**Important**: AI models are excluded from the repository to keep it lightweight. You need to download them manually for AI functionality to work.
+
+### Download Models from Google Drive
+
+1. **Download the model file**: https://drive.google.com/file/d/1PEaMPJQ0gei4PqXdPwHUmuckBNSQdtnm/view?usp=sharing
+
+2. **Extract the ZIP file** to get the model folders
+
+3. **Copy the extracted folders** to:
+   ```
+   python/models/task_category_model_final/
+   python/models/task_priority_model_final/
+   ```
+
+### Start AI Server
+
+After downloading models, start the AI server:
+```bash
+python python/ai_server.py
+```
+
+The AI server will start on `http://localhost:8000` by default.
+
+**Note**: Without the models, the application will still run but AI features will not work properly.
 
 ### Database Management
 
@@ -167,6 +194,55 @@ NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
 AI_SERVICE_ENDPOINT=...
 ```
+
+## AI Model Setup
+
+The AI models are stored separately to keep the repository lightweight. Follow these steps to set up the AI functionality:
+
+### Automatic Download (Recommended)
+
+```bash
+# Download all required AI models
+npm run download-models
+
+# Or run the script directly
+node scripts/download-models.js
+```
+
+### Manual Download
+
+If automatic download fails, you can download models manually:
+
+1. **Task Category Model**
+   - Download from: [Model Repository Link]
+   - Extract to: `python/models/task_category_model_final/`
+
+2. **Task Priority Model**
+   - Download from: [Model Repository Link]
+   - Extract to: `python/models/task_priority_model_final/`
+
+### Verify Installation
+
+```bash
+# Check if models are properly installed
+node scripts/download-models.js --check
+```
+
+### Python Dependencies
+
+After downloading models, install Python dependencies:
+
+```bash
+pip install -r python/requirements.txt
+```
+
+### Start AI Server
+
+```bash
+python python/ai_server.py
+```
+
+The AI server will start on `http://localhost:8000` by default.
 
 ## Contributing
 
