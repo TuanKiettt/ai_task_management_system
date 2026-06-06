@@ -1,23 +1,15 @@
-import { Client } from 'pg'
+import prisma from '@/lib/prisma'
 
 export async function GET(req: Request) {
   try {
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) return Response.json({ error: 'Database not configured' }, { status: 500 })
-
-    const client = new Client({ connectionString: dbUrl })
-    await client.connect()
-
-    const result = await client.query(`
+    const result: any = await prisma.$queryRaw`
       SELECT * FROM ab_test_results
       ORDER BY created_at DESC
       LIMIT 50
-    `)
-
-    await client.end()
+    `
 
     return Response.json({
-      tests: result.rows,
+      tests: result,
     })
   } catch (error) {
     console.error('[v0] A/B test error:', error)
@@ -33,19 +25,10 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) return Response.json({ error: 'Database not configured' }, { status: 500 })
-
-    const client = new Client({ connectionString: dbUrl })
-    await client.connect()
-
-    await client.query(
-      `INSERT INTO ab_test_results (model_a_id, model_b_id, test_input, model_a_output, model_b_output)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [modelAId, modelBId, testInput, modelAOutput, modelBOutput]
-    )
-
-    await client.end()
+    await prisma.$executeRaw`
+      INSERT INTO ab_test_results (model_a_id, model_b_id, test_input, model_a_output, model_b_output)
+      VALUES (${modelAId}, ${modelBId}, ${testInput}, ${modelAOutput}, ${modelBOutput})
+    `
 
     return Response.json({ success: true })
   } catch (error) {

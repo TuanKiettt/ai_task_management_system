@@ -1,5 +1,6 @@
 import { generateText, Output } from "ai"
 import { z } from "zod"
+import prisma from '@/lib/prisma'
 
 // Schema for extracted tasks
 const taskSchema = z.object({
@@ -10,7 +11,7 @@ const taskSchema = z.object({
       priority: z.enum(["Low", "Medium", "High", "Urgent"]).describe("Task priority based on urgency/importance"),
       category: z.string().describe("Task category like Academic, Meeting, Administrative, Planning, etc."),
       estimatedTime: z.string().describe("Estimated time to complete, e.g. '30m', '1h', '2h'"),
-      dueDate: z.string().nullable().describe("Due date in YYYY-MM-DD format if mentioned, otherwise null"),
+      dueDate: z.string().nullable().describe("Due date in YYYY-MM-DD format. Convert relative dates like 'Friday', 'tomorrow', 'next Monday' to actual dates. If no date mentioned, return null"),
     })
   ),
 })
@@ -174,7 +175,11 @@ Guidelines:
    - Low: Nice-to-have, flexible timing
 4. Categorize tasks appropriately (Academic, Meeting, Administrative, Planning, Personal, Technical, Health, Creative, etc.)
 5. Estimate realistic completion times
-6. Extract due dates if explicitly mentioned (format: YYYY-MM-DD)
+6. Extract due dates if explicitly mentioned and CONVERT THEM TO YYYY-MM-DD FORMAT:
+   - For relative dates like "Friday", "Monday", "tomorrow", "next Tuesday", calculate the actual date
+   - Use the current date as reference: ${new Date().toISOString().split('T')[0]}
+   - Example: If today is 2025-01-15 and user says "Friday", return "2025-01-17"
+   - Example: If user says "tomorrow", return the next day's date
 7. If input is unclear or not task-related, still try to identify any actionable items
 8. Combine related sub-tasks into single tasks when appropriate
 9. Keep descriptions concise but informative
@@ -230,25 +235,19 @@ async function collectTrainingExample(
 ) {
   try {
     const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) {
+    if (!process.env.DATABASE_URL) {
       console.warn("[v0] DATABASE_URL not set, skipping training data collection")
       return
     }
 
-    const { Client } = await import("pg")
-    const client = new Client({ connectionString: dbUrl }) as any
-    await client.connect()
-
     const output = JSON.stringify({ tasks: extractedTasks })
     const status = "pending" // Will be reviewed and approved by admin
 
-    await client.query(
-      `INSERT INTO training_examples (user_input, model_output, status, created_by)
-       VALUES ($1, $2, $3, $4)`,
-      [userInput, output, status, userId]
-    )
+    await prisma.$executeRaw`
+      INSERT INTO training_examples (user_input, model_output, status, created_by)
+      VALUES (${userInput}, ${output}, ${status}, ${userId})
+    `
 
-    await client.end()
     console.log("[v0] Training example collected successfully")
   } catch (error) {
     console.error("[v0] Training collection error:", error)

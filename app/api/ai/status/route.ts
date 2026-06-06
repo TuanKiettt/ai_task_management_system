@@ -17,8 +17,8 @@ export async function GET() {
         mode: 'intelligent-rule-based'
       },
       message: modelsLoaded 
-        ? '✅ AI intelligence system active' 
-        : '⚠️ AI system offline'
+        ? 'AI intelligence system active' 
+        : 'AI system offline'
     });
 
   } catch (error) {
@@ -31,7 +31,7 @@ export async function GET() {
         priorityModel: false
       },
       error: 'Failed to check model status',
-      message: '❌ Error checking status'
+      message: 'Error checking status'
     }, { status: 500 });
   }
 }

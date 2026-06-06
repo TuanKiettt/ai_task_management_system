@@ -90,47 +90,8 @@ export function AITaskExtractor({ userMessage, onTasksExtracted, isLoading: exte
 
     } catch (error) {
       console.error('❌ True AI extraction failed:', error);
-      
-      // Fallback to rule-based if custom model fails
-      try {
-        console.log('🔄 Falling back to rule-based extraction...');
-        
-        const fallbackResponse = await fetch('/api/ai/multiwoz', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userMessage })
-        });
 
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          if (fallbackData.success && fallbackData.task) {
-            const fallbackTask = {
-              id: `fallback-${Date.now()}`,
-              title: fallbackData.task.title,
-              category: fallbackData.task.category,
-              priority: fallbackData.task.priority,
-              time: 'No time specified',
-              completed: false,
-              createdAt: new Date(),
-              confidence: 0.5,
-              source: 'Rule-based Fallback',
-              motivationalNote: 'Task created using rule-based fallback (custom model unavailable)',
-              hasDate: !!fallbackData.task.dueDate
-            };
-
-            if (onTasksExtracted) {
-              onTasksExtracted([fallbackTask]);
-            }
-
-            setError('⚠️ Using rule-based fallback - custom AI model temporarily unavailable');
-            return;
-          }
-        }
-      } catch (fallbackError) {
-        console.error('❌ Fallback also failed:', fallbackError);
-      }
-      
-      // Final fallback
+      // Final fallback - create task from message
       const fallbackTask = {
         title: userMessage,
         category: 'general',
@@ -138,11 +99,11 @@ export function AITaskExtractor({ userMessage, onTasksExtracted, isLoading: exte
         time: 'No time specified',
         confidence: 0.5,
         hasDate: false,
-        motivationalNote: 'Task created from message (fallback)',
+        motivationalNote: 'Task created from message (AI model unavailable)',
         industryContext: industry || undefined,
         source: 'Error Fallback'
       };
-      
+
       setExtractedTasks([fallbackTask]);
       setShowTasks(true);
       setSelectedTasks(new Set([0]));
@@ -155,6 +116,31 @@ export function AITaskExtractor({ userMessage, onTasksExtracted, isLoading: exte
   // Helper function to parse date strings
   const parseDate = (dateStr: string): Date | undefined => {
     try {
+      const today = new Date()
+      const lower = dateStr.toLowerCase()
+      
+      // Handle day names (Monday, Tuesday, etc.)
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const dayIndex = days.findIndex(day => lower.includes(day))
+      if (dayIndex !== -1) {
+        const targetDate = new Date(today)
+        const currentDay = today.getDay()
+        let daysUntilTarget = dayIndex - currentDay
+        if (daysUntilTarget <= 0) {
+          daysUntilTarget += 7 // If the day has passed this week, use next week
+        }
+        targetDate.setDate(today.getDate() + daysUntilTarget)
+        return targetDate
+      }
+      
+      // Handle relative dates
+      if (lower.includes('today')) return today
+      if (lower.includes('tomorrow')) {
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        return tomorrow
+      }
+      
       // Handle common date formats
       if (dateStr.includes('/')) {
         const parts = dateStr.split('/')
@@ -164,17 +150,6 @@ export function AITaskExtractor({ userMessage, onTasksExtracted, isLoading: exte
           const year = parts[2] ? parseInt(parts[2]) : new Date().getFullYear()
           return new Date(year, month, day)
         }
-      }
-      
-      // Handle relative dates
-      const today = new Date()
-      const lower = dateStr.toLowerCase()
-      
-      if (lower.includes('today')) return today
-      if (lower.includes('tomorrow')) {
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        return tomorrow
       }
       
       // Handle "28/3" format

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
+import * as chrono from "chrono-node"
 
 export async function GET(req: NextRequest) {
   try {
@@ -96,6 +97,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Helper function to parse date strings using chrono-node
+function parseDate(dateStr: string): Date | null {
+  try {
+    const results = chrono.parse(dateStr)
+    if (results.length > 0) {
+      return results[0].start.date()
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { userId, title, description, category, priority, status, estimatedTime, dueDate, workspaceId } = await req.json()
@@ -104,16 +118,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User ID and title are required" }, { status: 400 })
     }
 
+    // Validate priority enum
+    const validPriorities = ['Low', 'Medium', 'High', 'Urgent']
+    const normalizedPriority = priority ?
+      (priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()) :
+      'Medium'
+
+    if (!validPriorities.includes(normalizedPriority)) {
+      return NextResponse.json({ error: `Invalid priority. Must be one of: ${validPriorities.join(', ')}` }, { status: 400 })
+    }
+
+    // Parse due date if provided
+    let parsedDueDate = null
+    if (dueDate) {
+      if (typeof dueDate === 'string') {
+        parsedDueDate = parseDate(dueDate)
+      } else if (dueDate instanceof Date) {
+        parsedDueDate = dueDate
+      }
+    }
+
     const task = await prisma.task.create({
       data: {
         userId,
         title,
         description,
         category: category || 'General',
-        priority,
-        status,
+        priority: normalizedPriority as any,
+        status: status || 'new',
         estimatedTime,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: parsedDueDate,
         workspaceId: workspaceId || null,
       },
     })

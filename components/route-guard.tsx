@@ -24,10 +24,10 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         const hasUserData = localStorage.getItem("user-data")
         const hasIndustry = localStorage.getItem("user-industry")
         
-        if (hasUserData || hasIndustry) {
-          setUserContextReady(true)
-          setIsLoading(false)
-        }
+        // Set ready regardless of whether user data exists
+        // This allows the loading screen to dismiss even for non-logged-in users
+        setUserContextReady(true)
+        setIsLoading(false)
       }
 
       // Check immediately

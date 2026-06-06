@@ -339,50 +339,54 @@ export async function extractTasksWithLocalAI(message: string): Promise<string> 
   try {
     // Add cache-busting timestamp
     const timestamp = Date.now();
-    
+
     console.log('🔍 extractTasksWithLocalAI called with:', message);
-    console.log('🔍 Using cache-busting URL:', `/api/ai/multiwoz?t=${timestamp}`);
-    
-    // Call MultiWOZ API instead of using old local AI
-    const response = await fetch(`/api/ai/multiwoz?t=${timestamp}`, {
+    console.log('🔍 Using cache-busting URL:', `/api/ai/persistent-true-ai?t=${timestamp}`);
+
+    // Call persistent-true-ai API (MS-LaTTE trained models)
+    const response = await fetch(`/api/ai/persistent-true-ai?t=${timestamp}`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({
+        message,
+        userId: 'current-user',
+        context: { timestamp: new Date().toISOString() }
+      })
     });
-    
+
     const data = await response.json();
     console.log('🔍 API Response:', data);
-    
+
     if (data.success && data.task) {
       const task = data.task;
       const result = `I found 1 task in your message:
 [
-  { 
-    "title": "${task.title}", 
-    "category": "${task.category}", 
-    "priority": "${task.priority}", 
-    "estimatedTime": "${task.estimatedTime}" 
+  {
+    "title": "${task.title}",
+    "category": "${task.category}",
+    "priority": "${task.priority}",
+    "estimatedTime": "${task.time}"
   }
 ]
 
-Due date: ${task.dueDate || 'Not specified'}
+Due date: ${task.date || 'Not specified'}
 
-${data.usedFallback ? '(Using rule-based analysis)' : '(AI-powered analysis)'}
-Confidence: ${data.prediction?.confidence || 0.85}`;
-      
+(AI-powered analysis with MS-LaTTE trained models)
+Confidence: ${data.confidence || 0.85}`;
+
       console.log('🔍 Final result:', result);
       return result;
     } else {
       throw new Error('API failed');
     }
   } catch (error) {
-    console.error('🔍 MultiWOZ API error:', error);
-    
+    console.error('🔍 Persistent True AI API error:', error);
+
     // Fallback to old logic
     const result = await localAI.extractTasks(message);
     return localAI.formatResponse(result, message);

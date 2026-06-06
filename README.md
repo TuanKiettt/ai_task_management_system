@@ -9,7 +9,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 - **Task Management**: Create, organize, and track tasks with AI assistance
 - **Real-time Collaboration**: WebSocket-based real-time updates
 - **Authentication & Security**: NextAuth.js integration with 2FA support
-- **Database Integration**: PostgreSQL with Prisma ORM
+- **Database Integration**: MySQL with Prisma ORM
 
 ### AI Modes
 - **Chat Assistant**: General help and Q&A
@@ -39,7 +39,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 ### Backend
 - **Next.js API Routes**: Server-side API endpoints
 - **Prisma**: Database ORM
-- **PostgreSQL**: Primary database
+- **MySQL**: Primary database
 - **NextAuth.js**: Authentication
 - **WebSocket**: Real-time communication
 
@@ -51,7 +51,7 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL database
+- MySQL database
 - Python 3.8+ (for AI features)
 
 ### Installation
@@ -107,7 +107,7 @@ Train the AI model with custom data:
 npm run ai-train
 ```
 
-This will run the `train_multiwoz.py` script to train models with your custom dataset.
+This will run the `train_mslatte.py` script to train models with the MS-LaTTE dataset.
 
 ## Project Structure
 
@@ -164,7 +164,7 @@ This will run the `train_multiwoz.py` script to train models with your custom da
 Key environment variables to configure:
 
 ```env
-DATABASE_URL=postgresql://...
+DATABASE_URL=mysql://root:@localhost:3306/task_management
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
 AI_SERVICE_ENDPOINT=...

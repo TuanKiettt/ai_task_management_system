@@ -71,10 +71,14 @@ export class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage) {
+    console.log('WebSocket service received message:', message.type, message)
     const handlers = this.messageHandlers.get(message.type) || []
+    console.log('Handlers for type', message.type, ':', handlers.length)
+    console.log('Message data:', message.data)
     handlers.forEach(handler => {
       try {
-        handler(message.data)
+        console.log('Calling handler with full message:', message)
+        handler(message)  // Pass full message object instead of just data
       } catch (error) {
         console.error('Error in message handler:', error)
       }

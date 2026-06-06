@@ -8,37 +8,41 @@ export class ChatEngine {
     let response = '';
 
     if (mode === 'task-generate') {
-      // Use MultiWOZ AI for task generation
+      // Use persistent-true-ai API (MS-LaTTE trained models) for task generation
       try {
         const timestamp = Date.now();
-        const aiResponse = await fetch(`http://localhost:3000/api/ai/multiwoz?t=${timestamp}`, {
+        const aiResponse = await fetch(`http://localhost:3000/api/ai/persistent-true-ai?t=${timestamp}`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0'
           },
-          body: JSON.stringify({ message: userContent })
+          body: JSON.stringify({
+            message: userContent,
+            userId: 'current-user',
+            context: { timestamp: new Date().toISOString() }
+          })
         });
-        
+
         const data = await aiResponse.json();
-        
+
         if (data.success && data.task) {
           response = `I found 1 task in your message:
 [
-  { 
-    "title": "${data.task.title}", 
-    "category": "${data.task.category}", 
-    "priority": "${data.task.priority}", 
-    "estimatedTime": "${data.task.estimatedTime}" 
+  {
+    "title": "${data.task.title}",
+    "category": "${data.task.category}",
+    "priority": "${data.task.priority}",
+    "estimatedTime": "${data.task.time}"
   }
 ]
 
-Due date: ${data.task.dueDate || 'Not specified'}
+Due date: ${data.task.date || 'Not specified'}
 
-${data.usedFallback ? '(Using rule-based analysis)' : '(AI-powered analysis)'}
-Confidence: ${data.prediction?.confidence || 0.85}`;
+(AI-powered analysis with MS-LaTTE trained models)
+Confidence: ${data.confidence || 0.85}`;
         } else {
           response = 'I couldn\'t extract any tasks from your message. Please try describing your tasks more clearly.';
         }

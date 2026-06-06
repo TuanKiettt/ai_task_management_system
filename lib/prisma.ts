@@ -1,4 +1,4 @@
-// Prisma Client for PostgreSQL Database
+// Prisma Client for MySQL Database
 import { PrismaClient } from "@prisma/client"
 
 declare global {

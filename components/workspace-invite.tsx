@@ -34,6 +34,7 @@ import {
   User
 } from "lucide-react"
 import { useWorkspace } from "@/context/workspace-context"
+import { useUser } from "@/context/user-context"
 import type { WorkspaceRole } from "@/context/workspace-context"
 
 interface WorkspaceInviteProps {
@@ -64,6 +65,7 @@ const ROLE_DESCRIPTIONS = {
 
 export function WorkspaceInvite({ workspaceId, className }: WorkspaceInviteProps) {
   const { inviteMembers, invitations, currentWorkspace } = useWorkspace()
+  const { userId } = useUser()
   const [mounted, setMounted] = useState(false)
   const [inviteLink, setInviteLink] = useState("")
   const [copiedLink, setCopiedLink] = useState(false)
@@ -109,11 +111,40 @@ export function WorkspaceInvite({ workspaceId, className }: WorkspaceInviteProps
 
     try {
       setIsInviting(true)
-      await inviteMembers(workspaceId, emailList)
-      setEmailList([])
-      setIsDialogOpen(false)
+      const response = await fetch(`/api/workspaces/${workspaceId}/invitations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invitations: emailList,
+          userId
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const errors = data.errors || []
+
+        // Show errors for emails that couldn't be invited
+        if (errors.length > 0) {
+          const errorMessages = errors.map((e: any) => e.message).join('\n')
+          alert(`Errors:\n${errorMessages}`)
+        }
+
+        // Only clear email list if there were successful invitations
+        if (data.invitations && data.invitations.length > 0) {
+          setEmailList([])
+          setIsDialogOpen(false)
+        }
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send invitations')
+      }
     } catch (error) {
       console.error("Failed to send invitations:", error)
+      // Show error to user
+      alert(error instanceof Error ? error.message : 'Failed to send invitations')
     } finally {
       setIsInviting(false)
     }
@@ -121,11 +152,43 @@ export function WorkspaceInvite({ workspaceId, className }: WorkspaceInviteProps
 
   const generateInviteLink = () => {
     if (!currentWorkspace) return ""
+    // Generate a simple invite link without token for public access
+    // The validation endpoint will need to handle this case
+    return `${window.location.origin}/invite/${workspaceId}`
+  }
+
+  const generateInviteLinkWithToken = async () => {
+    if (!currentWorkspace || !userId) return ""
+    
+    try {
+      // Create an invitation to get a token
+      const response = await fetch(`/api/workspaces/${workspaceId}/invitations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invitations: [{ email: 'public-invite@temp.com', role: 'member' }],
+          userId
+        }),
+      })
+
+      if (response.ok) {
+        const invitations = await response.json()
+        if (invitations && invitations.length > 0) {
+          const token = invitations[0].token
+          return `${window.location.origin}/invite/${workspaceId}?token=${token}`
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate invite link with token:', error)
+    }
+    
     return `${window.location.origin}/invite/${workspaceId}`
   }
 
   const copyInviteLink = async () => {
-    const link = generateInviteLink()
+    const link = await generateInviteLinkWithToken()
     if (!link) return
 
     try {

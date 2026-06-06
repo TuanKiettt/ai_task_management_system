@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import nodemailer from 'nodemailer'
 
 // GET all invitations for a workspace
 export async function GET(
@@ -66,10 +67,10 @@ export async function POST(
   try {
     const { workspaceId } = await params
     const body = await request.json()
-    const { emails, role, message, userId: requesterId } = body
+    const { invitations, userId: requesterId } = body
 
-    if (!emails || !requesterId) {
-      return NextResponse.json({ error: 'Emails and requester ID are required' }, { status: 400 })
+    if (!invitations || !requesterId) {
+      return NextResponse.json({ error: 'Invitations and requester ID are required' }, { status: 400 })
     }
 
     // Check if user has permission to invite
@@ -98,23 +99,43 @@ export async function POST(
       return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 })
     }
 
-    const invitations = []
+    const createdInvitations = []
+    const errors = []
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7) // Expire in 7 days
 
-    for (const email of emails) {
+    for (const invitationData of invitations) {
+      const email = invitationData.email
+      const role = invitationData.role
+
+      // Check if email exists in database - REQUIRED
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      })
+
+      if (!existingUser) {
+        // Add error for non-existent email - don't create invitation
+        errors.push({
+          email,
+          message: `Email ${email} does not exist in the system. User must register before being invited.`
+        })
+        continue // Skip this email
+      }
+
       // Check if user is already a member
       const existingMember = await prisma.workspaceMember.findFirst({
         where: {
           workspaceId: workspaceId,
-          user: {
-            email: email.toLowerCase()
-          },
+          userId: existingUser.id,
           isActive: true
         }
       })
 
       if (existingMember) {
+        errors.push({
+          email,
+          message: `${email} is already a member of this workspace`
+        })
         continue // Skip if already a member
       }
 
@@ -128,6 +149,10 @@ export async function POST(
       })
 
       if (existingInvitation) {
+        errors.push({
+          email,
+          message: `${email} already has a pending invitation`
+        })
         continue // Skip if invitation already pending
       }
 
@@ -145,10 +170,26 @@ export async function POST(
         }
       })
 
-      invitations.push(invitation)
+      createdInvitations.push(invitation)
+      
+      // Send invitation email (optional, if SMTP configured)
+      await sendInvitationEmail(email, workspace.name, token, workspaceId)
+      
+      // Create notification for inviter
+      await createNotification(
+        requesterId,
+        `Invitation sent to ${email}`,
+        `You have invited ${email} to join "${workspace.name}" as ${role || 'member'}`,
+        'success',
+        'system',
+        `/workspace/${workspaceId}/members`
+      )
     }
 
-    return NextResponse.json(invitations, { status: 201 })
+    return NextResponse.json({
+      invitations: createdInvitations,
+      errors: errors
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating invitations:', error)
     return NextResponse.json({ error: 'Failed to create invitations' }, { status: 500 })
@@ -229,4 +270,82 @@ function generateInvitationToken(): string {
     token += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return token
+}
+
+// Helper function to send invitation email
+async function sendInvitationEmail(email: string, workspaceName: string, token: string, workspaceId: string) {
+  // Skip email sending if SMTP credentials are not configured
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log('SMTP credentials not configured, skipping email sending')
+    return
+  }
+
+  try {
+    // Configure email transporter (using environment variables)
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    })
+
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${workspaceId}?token=${token}`
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: email,
+      subject: `You're invited to join "${workspaceName}"`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">You're invited to join "${workspaceName}"</h2>
+          <p style="color: #666;">You have been invited to collaborate in a workspace on the AI Task Management System.</p>
+          <p style="color: #666;">Click the button below to accept the invitation:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${inviteUrl}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Accept Invitation
+            </a>
+          </div>
+          <p style="color: #999; font-size: 12px;">Or copy and paste this link into your browser:</p>
+          <p style="color: #999; font-size: 12px; word-break: break-all;">${inviteUrl}</p>
+          <p style="color: #999; font-size: 12px; margin-top: 30px;">This invitation will expire in 7 days.</p>
+        </div>
+      `
+    }
+
+    await transporter.sendMail(mailOptions)
+    console.log(`Invitation email sent to ${email}`)
+  } catch (error) {
+    console.error('Failed to send invitation email:', error)
+    // Don't throw error - invitation is still created, just email failed
+  }
+}
+
+// Helper function to create notification
+async function createNotification(
+  userId: string,
+  title: string,
+  message: string,
+  type: 'info' | 'success' | 'warning' | 'error' = 'info',
+  category: string = 'system',
+  actionUrl?: string
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        title,
+        message,
+        type,
+        category,
+        actionUrl
+      }
+    })
+  } catch (error) {
+    console.error('Failed to create notification:', error)
+    // Don't throw error - notification failure shouldn't break the main flow
+  }
 }

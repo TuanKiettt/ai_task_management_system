@@ -122,6 +122,7 @@ interface WorkspaceContextType {
   assignMemberRole: (memberId: string, role: WorkspaceRole) => Promise<void>
   updateMemberPermissions: (memberId: string, permissions: string[]) => Promise<void>
   removeMember: (memberId: string) => Promise<void>
+  checkPendingInvitations: (email: string) => Promise<any[]>
   
   // Invitation management
   acceptInvitation: (token: string) => Promise<void>
@@ -243,13 +244,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setError(null)
       const response = await fetch(`/api/workspaces/${currentWorkspace.id}/members?userId=${userId}`)
       if (!response.ok) {
-        throw new Error('Failed to fetch members')
+        // If members API fails, just log error and don't set global error
+        console.error('Failed to fetch members:', response.status)
+        return
       }
 
       const membersData = await response.json()
       setMembers(membersData || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load members')
+      // If members API fails, just log error and don't set global error
       console.error('Error fetching members:', err)
     }
   }, [currentWorkspace, userId])
@@ -273,6 +276,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentWorkspace, userId])
 
+  // Check for pending invitations by user email
+  const checkPendingInvitations = useCallback(async (email: string) => {
+    try {
+      const response = await fetch(`/api/invitations/pending?email=${encodeURIComponent(email)}`)
+      if (response.ok) {
+        const data = await response.json()
+        return data.invitations || []
+      }
+      return []
+    } catch (err) {
+      console.error('Error checking pending invitations:', err)
+      return []
+    }
+  }, [])
+
   // Create workspace
   const createWorkspace = useCallback(async (workspaceData: Omit<Workspace, "id" | "createdAt" | "updatedAt">) => {
     try {
@@ -290,7 +308,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           ...workspaceData,
-          ownerId: currentUserId,
+          userId: currentUserId,
         }),
       })
 
@@ -387,20 +405,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ invitations }),
+        body: JSON.stringify({ 
+          invitations,
+          userId 
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send invitations')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send invitations')
       }
 
+      // Only fetch invitations, not members (members will be added after invitation is accepted)
       await fetchInvitations()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invitations')
       console.error('Error inviting members:', err)
       throw err
     }
-  }, [fetchInvitations])
+  }, [fetchInvitations, userId])
 
   // Assign member role
   const assignMemberRole = useCallback(async (memberId: string, role: WorkspaceRole) => {
@@ -686,6 +709,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     assignMemberRole,
     updateMemberPermissions,
     removeMember,
+    checkPendingInvitations,
     acceptInvitation,
     declineInvitation,
     cancelInvitation,

@@ -23,7 +23,7 @@ import {
   Crown
 } from 'lucide-react'
 import { WorkspaceErrorBoundary } from '@/components/workspace-error-boundary'
-import { InviteMembersModal } from '@/components/workspace/invite-members-modal'
+import { WorkspaceInvite } from '@/components/workspace-invite'
 
 export default function WorkspaceMembersPage() {
   const params = useParams()
@@ -33,7 +33,6 @@ export default function WorkspaceMembersPage() {
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showInviteModal, setShowInviteModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState<'all' | 'owner' | 'admin' | 'member'>('all')
 
@@ -186,10 +185,6 @@ export default function WorkspaceMembersPage() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button onClick={() => setShowInviteModal(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Members
-              </Button>
               <Button variant="outline" onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -282,10 +277,6 @@ export default function WorkspaceMembersPage() {
         <Card>
           <CardHeader className="flex justify-between items-center">
             <CardTitle>Members ({filteredMembers.length})</CardTitle>
-            <Button variant="outline" onClick={() => setShowInviteModal(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Members
-            </Button>
           </CardHeader>
           <CardContent>
             {filteredMembers.length === 0 ? (
@@ -361,11 +352,8 @@ export default function WorkspaceMembersPage() {
         )}
       </div>
       
-      {/* Invite Members Modal */}
-      <InviteMembersModal 
-        isOpen={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-      />
+      {/* Invite Members */}
+      <WorkspaceInvite workspaceId={workspaceId} />
     </div>
   )
 }

@@ -55,74 +55,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setIsLoggedIn(true)
       } catch (error) {
         console.error("Failed to parse user data:", error)
-        // If parsing fails, create mock user
-        createMockUser()
-      }
-    } else {
-      // Create mock user data for testing
-      createMockUser()
-    }
-    
-    async function createMockUser() {
-      // Generate unique user data
-      const mockUserData: UserData = {
-        id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        email: `user${Date.now()}@demo.com`,
-        fullName: `User ${Math.floor(Math.random() * 1000)}`,
-        industry: "education",
-        createdAt: new Date().toISOString()
-      }
-      
-      try {
-        // Call setup API to create user and add to default workspace
-        const response = await fetch('/api/users/setup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            workspaceId: 'cmnokv6tv00034yd4m3njp4ey', // Default workspace
-            userData: mockUserData
-          })
-        })
-        
-        if (response.ok) {
-          const result = await response.json()
-          const realUserData = result.user
-          
-          setUserDataState(realUserData)
-          setUserName(realUserData.fullName)
-          setUserId(realUserData.id)
-          setIndustryState(realUserData.industry)
-          setIsLoggedIn(true)
-          
-          // Save real user data to localStorage
-          localStorage.setItem("user-data", JSON.stringify(realUserData))
-          localStorage.setItem("user-industry", realUserData.industry)
-        } else {
-          // Fallback to temp user if API fails
-          setUserDataState(mockUserData)
-          setUserName(mockUserData.fullName)
-          setUserId(mockUserData.id)
-          setIndustryState(mockUserData.industry)
-          setIsLoggedIn(true)
-          
-          localStorage.setItem("user-data", JSON.stringify(mockUserData))
-          localStorage.setItem("user-industry", mockUserData.industry)
-        }
-      } catch (error) {
-        console.error('Failed to setup user:', error)
-        // Fallback to temp user
-        setUserDataState(mockUserData)
-        setUserName(mockUserData.fullName)
-        setUserId(mockUserData.id)
-        setIndustryState(mockUserData.industry)
-        setIsLoggedIn(true)
-        
-        localStorage.setItem("user-data", JSON.stringify(mockUserData))
-        localStorage.setItem("user-industry", mockUserData.industry)
+        // Clear invalid data instead of creating mock user
+        localStorage.removeItem("user-data")
+        localStorage.removeItem("user-industry")
       }
     }
+    // Removed auto-create mock user - user must login manually
   }, [mounted])
 
   const setIndustry = (newIndustry: Industry) => {
@@ -149,7 +87,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setUserName("Amber")
     localStorage.removeItem("user-data")
     localStorage.removeItem("user-industry")
+    localStorage.removeItem("userId")
     document.cookie = "user-industry=; path=/; max-age=0"
+    
+    // Redirect to login page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login'
+    }
   }
 
   return (

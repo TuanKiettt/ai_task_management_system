@@ -42,7 +42,14 @@ export class DateTimeExtractor {
       nextMonth.setMonth(nextMonth.getMonth() + 1)
       return nextMonth
     }},
-    // Day of week patterns
+    // Day of week patterns (with and without "next")
+    { pattern: /\b(monday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(1) },
+    { pattern: /\b(tuesday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(2) },
+    { pattern: /\b(wednesday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(3) },
+    { pattern: /\b(thursday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(4) },
+    { pattern: /\b(friday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(5) },
+    { pattern: /\b(saturday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(6) },
+    { pattern: /\b(sunday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(0) },
     { pattern: /\b(next monday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(1) },
     { pattern: /\b(next tuesday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(2) },
     { pattern: /\b(next wednesday)\b/i, getRelativeDate: (_match: RegExpMatchArray) => this.getNextDayOfWeek(3) },
@@ -285,7 +292,7 @@ export class DateTimeExtractor {
       /\b(meeting|call|appointment|session)\s+(?:about|for|regarding)?\s*([^,.!?]+)/gi,
       /\b(review|submit|finish|complete|prepare|plan|organize)\s+([^,.!?]+)/gi,
       // NEW: Task + date pattern (date first)
-      /\b(today|tomorrow|next day|next week|next month|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday)\s*,?\s*([^,.!?]+)/gi
+      /\b(today|tomorrow|next day|next week|next month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday)\s*,?\s*([^,.!?]+)/gi
     ]
 
     for (const pattern of taskPatterns) {

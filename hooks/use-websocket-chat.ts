@@ -52,10 +52,15 @@ export function useWebSocketChat({
 
     // Set up message handlers
     const handleMessage = (message: WebSocketMessage) => {
+      console.log('useWebSocketChat handleMessage:', message.type, message)
       switch (message.type) {
         case 'message':
+          console.log('handlersRef.current.onNewMessage:', handlersRef.current.onNewMessage)
           if (handlersRef.current.onNewMessage) {
+            console.log('Calling onNewMessage with:', message.data)
             handlersRef.current.onNewMessage(message.data)
+          } else {
+            console.log('onNewMessage handler is undefined')
           }
           break
         case 'typing':

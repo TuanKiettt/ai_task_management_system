@@ -5,11 +5,14 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   let message = '';
+  let userId = '';
+  let context = {};
   
   try {
     const body = await request.json();
     message = body.message || '';
-    const { userId, context } = body;
+    userId = body.userId || 'anonymous';
+    context = body.context || {};
 
     if (!message) {
       return NextResponse.json(
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🧠 Persistent True AI Processing: "${message}"`);
+    console.log(`Persistent True AI Processing: "${message}"`);
 
     // Call persistent AI server
     const response = await fetch('http://localhost:8888', {
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json();
-    console.log(`✅ Persistent True AI Result: ${result.task.title} (${result.task.category})`);
+    console.log(`Persistent True AI Result: ${result.task.title} (${result.task.category})`);
 
     return NextResponse.json({
       success: true,
@@ -47,41 +50,60 @@ export async function POST(request: NextRequest) {
       prediction: result.prediction,
       confidence: result.confidence,
       model_info: result.model_info,
-      message: '✅ Processed with persistent true AI understanding'
+      message: 'Processed with persistent true AI understanding'
     });
 
   } catch (error) {
     console.error('Persistent True AI processing error:', error);
     
-    // Check if server is not running
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
-      return NextResponse.json({
-        success: true,
-        task: {
-          title: message || 'Unknown task',
-          category: 'general',
-          priority: 'medium',
-          time: 'No time specified',
-          confidence: 0.5,
-          hasDate: false,
-          motivationalNote: 'Task created from message (persistent AI server not running)',
-          source: 'AI Fallback'
+    // Fallback to LLM API for true AI understanding
+    try {
+      const llmResponse = await fetch('/api/extract-tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        prediction: {
-          category: 'create_task',
-          priority: 'medium',
-          confidence: 0.5
-        },
-        confidence: 0.5,
-        model_info: {
-          type: 'Rule-based Fallback',
-          reason: 'Persistent AI server not running - please start python ai_server.py'
-        }
+        body: JSON.stringify({
+          input: message,
+          userId: userId || 'anonymous'
+        })
       });
+
+      if (llmResponse.ok) {
+        const llmResult = await llmResponse.json();
+        if (llmResult.tasks && llmResult.tasks.length > 0) {
+          const task = llmResult.tasks[0];
+          return NextResponse.json({
+            success: true,
+            task: {
+              title: task.title,
+              category: task.category,
+              priority: task.priority,
+              time: task.estimatedTime,
+              date: task.dueDate ? new Date(task.dueDate) : undefined,
+              hasDate: !!task.dueDate,
+              confidence: 0.85,
+              motivationalNote: 'Task extracted using GPT-4o-mini AI',
+              source: 'LLM API Fallback'
+            },
+            prediction: {
+              category: 'create_task',
+              priority: task.priority,
+              confidence: 0.85
+            },
+            confidence: 0.85,
+            model_info: {
+              type: 'OpenAI GPT-4o-mini',
+              reason: 'Persistent AI server unavailable - using LLM API for true AI understanding'
+            }
+          });
+        }
+      }
+    } catch (llmError) {
+      console.error('LLM API fallback failed:', llmError);
     }
     
-    // Fallback to rule-based if AI fails
+    // Final fallback if both fail
     return NextResponse.json({
       success: true,
       task: {
@@ -89,20 +111,20 @@ export async function POST(request: NextRequest) {
         category: 'general',
         priority: 'medium',
         time: 'No time specified',
-        confidence: 0.5,
+        confidence: 0.3,
         hasDate: false,
-        motivationalNote: 'Task created from message (AI fallback)',
-        source: 'AI Fallback'
+        motivationalNote: 'Task created from message (AI unavailable)',
+        source: 'Basic Fallback'
       },
       prediction: {
         category: 'create_task',
         priority: 'medium',
-        confidence: 0.5
+        confidence: 0.3
       },
-      confidence: 0.5,
+      confidence: 0.3,
       model_info: {
-        type: 'Rule-based Fallback',
-        reason: 'Persistent true AI model unavailable'
+        type: 'Basic Fallback',
+        reason: 'Both AI servers unavailable'
       }
     });
   }
@@ -120,7 +142,7 @@ export async function GET() {
       return NextResponse.json({
         success: true,
         status: status.status,
-        message: '🧠 Persistent True AI Server is active and connected'
+        message: 'Persistent True AI Server is active and connected'
       });
     } else {
       throw new Error('Server not responding');
@@ -130,8 +152,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       status: {
-        model_type: 'Persistent Custom-Trained MultiWOZ + DistilBERT',
-        dataset: 'MultiWOZ v22 + Public Datasets (IMDB, AG News, SQuAD, GLUE)',
+        model_type: 'Persistent Custom-Trained MS-LaTTE + DistilBERT',
+        dataset: 'MS-LaTTE (Microsoft Locations and Times of Task Execution)',
         training: 'Completed',
         server_status: 'OFFLINE',
         capabilities: [
@@ -145,7 +167,7 @@ export async function GET() {
         available: false,
         instruction: 'Run: python ai_server.py in python directory'
       },
-      message: '🔌 Persistent True AI Server is offline - start python ai_server.py to enable'
+      message: 'Persistent True AI Server is offline - start python ai_server.py to enable'
     });
   }
 }

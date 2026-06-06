@@ -24,7 +24,7 @@ import {
 import { useWorkspace } from "@/context/workspace-context"
 import { useUser } from "@/context/user-context"
 import { ChatSettings } from "@/components/chat-settings"
-// import { useWebSocketChat } from "@/hooks/use-websocket-chat"
+import { useWebSocketChat } from "@/hooks/use-websocket-chat"
 
 interface ChatMessage {
   id: string
@@ -76,31 +76,34 @@ export function WorkspaceChat() {
   const [showSettings, setShowSettings] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // WebSocket integration (temporarily disabled for testing)
-  const isConnected = false
-  const sendWebSocketMessage = () => {}
-  const sendTyping = () => {}
-  const typingUsers: string[] = []
-  
-  // const {
-  //   isConnected,
-  //   sendMessage: sendWebSocketMessage,
-  //   sendTyping,
-  //   typingUsers
-  // } = useWebSocketChat({
-  //   workspaceId: currentWorkspace?.id || '',
-  //   userId: userId || '',
-  //   chatId: selectedChat?.id,
-  //   onNewMessage: (message) => {
-  //     if (selectedChat && message.chatId === selectedChat.id) {
-  //       setMessages(prev => [...prev, message])
-  //     }
-  //   },
-  //   onTyping: (data) => {
-  //     // Handle typing indicators
-  //     console.log('User typing:', data)
-  //   }
-  // })
+  // WebSocket integration
+  const {
+    isConnected,
+    sendMessage: sendWebSocketMessage,
+    sendTyping,
+    typingUsers
+  } = useWebSocketChat({
+    workspaceId: currentWorkspace?.id || '',
+    userId: userId || '',
+    chatId: selectedChat?.id,
+    onNewMessage: (message) => {
+      console.log('Received new message from WebSocket:', message)
+      console.log('Selected chat ID:', selectedChat?.id)
+      console.log('Message chat ID:', message.chatId)
+      console.log('Match check:', selectedChat && message.chatId === selectedChat.id)
+      
+      if (selectedChat && message.chatId === selectedChat.id) {
+        console.log('Adding message to state')
+        setMessages(prev => [...prev, message])
+      } else {
+        console.log('Not adding message - chat ID mismatch or no selected chat')
+      }
+    },
+    onTyping: (data) => {
+      // Handle typing indicators
+      console.log('User typing:', data)
+    }
+  })
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -189,31 +192,11 @@ export function WorkspaceChat() {
       setSending(true)
       console.log('Sending message:', newMessage.trim(), 'to chat:', selectedChat.id)
       
-      // Force use HTTP API only (disable WebSocket for testing)
-      console.log('Sending via HTTP API (WebSocket disabled for testing)')
-      const response = await fetch(
-        `/api/workspaces/${currentWorkspace?.id}/chats/${selectedChat.id}/messages?userId=${userId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: newMessage.trim(),
-            messageType: 'text'
-          })
-        }
-      )
-
-      console.log('HTTP response status:', response.status)
-      if (response.ok) {
-        const message = await response.json()
-        console.log('Message saved:', message)
+      // Use WebSocket if connected, otherwise fallback to HTTP
+      if (isConnected) {
+        console.log('Sending via WebSocket')
+        sendWebSocketMessage(newMessage.trim(), 'text')
         setNewMessage("")
-        
-        // Fetch messages to ensure UI is updated
-        console.log('Fetching messages after HTTP send')
-        fetchMessages()
         
         // Update unread count
         setChats(prev => prev.map(chat => 
@@ -222,8 +205,41 @@ export function WorkspaceChat() {
             : chat
         ))
       } else {
-        const errorData = await response.json()
-        console.error('Failed to send message:', errorData)
+        console.log('WebSocket not connected, falling back to HTTP API')
+        const response = await fetch(
+          `/api/workspaces/${currentWorkspace?.id}/chats/${selectedChat.id}/messages?userId=${userId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: newMessage.trim(),
+              messageType: 'text'
+            })
+          }
+        )
+
+        console.log('HTTP response status:', response.status)
+        if (response.ok) {
+          const message = await response.json()
+          console.log('Message saved:', message)
+          setNewMessage("")
+          
+          // Fetch messages to ensure UI is updated
+          console.log('Fetching messages after HTTP send')
+          fetchMessages()
+          
+          // Update unread count
+          setChats(prev => prev.map(chat => 
+            chat.id === selectedChat.id 
+              ? { ...chat, unreadCount: 0 }
+              : chat
+          ))
+        } else {
+          const errorData = await response.json()
+          console.error('Failed to send message:', errorData)
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -494,21 +510,21 @@ export function WorkspaceChat() {
                     value={newMessage}
                     onChange={(e) => {
                       setNewMessage(e.target.value)
-                      // Send typing indicator (disabled for testing)
-                      // if (e.target.value.trim()) {
-                      //   sendTyping(true)
-                      // } else {
-                      //   sendTyping(false)
-                      // }
+                      // Send typing indicator
+                      if (e.target.value.trim()) {
+                        sendTyping(true)
+                      } else {
+                        sendTyping(false)
+                      }
                     }}
                     onBlur={() => {
-                      // sendTyping(false)
+                      sendTyping(false)
                     }}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
                         sendMessage()
-                        // sendTyping(false)
+                        sendTyping(false)
                       }
                     }}
                     className="flex-1"

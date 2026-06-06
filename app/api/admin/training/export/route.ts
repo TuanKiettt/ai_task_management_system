@@ -1,25 +1,17 @@
-import { Client } from 'pg'
+import prisma from '@/lib/prisma'
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const format = url.searchParams.get('format') || 'jsonl'
 
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) return Response.json({ error: 'Database not configured' }, { status: 500 })
-
-    const client = new Client({ connectionString: dbUrl })
-    await client.connect()
-
     // Get only approved examples
-    const result = await client.query(`
+    const result: any = await prisma.$queryRaw`
       SELECT user_input, model_output
       FROM training_examples
       WHERE status = 'approved'
       ORDER BY created_at ASC
-    `)
-
-    await client.end()
+    `
 
     if (format === 'jsonl') {
       // Convert to JSONL format

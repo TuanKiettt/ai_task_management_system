@@ -1,49 +1,42 @@
-import { Client } from 'pg'
+import prisma from '@/lib/prisma'
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const filter = url.searchParams.get('filter') || 'pending'
 
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) return Response.json({ error: 'Database not configured' }, { status: 500 })
-
-    const client = new Client({ connectionString: dbUrl })
-    await client.connect()
-
     // Get stats
-    const statsResult = await client.query(`
-      SELECT 
+    const statsResult: any = await prisma.$queryRaw`
+      SELECT
         COUNT(*) as total,
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
         COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved,
         COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected
       FROM training_examples
-    `)
-    const stats = statsResult.rows[0]
+    `
+    const stats = statsResult[0] || { total: 0, pending: 0, approved: 0, rejected: 0 }
 
     // Get examples based on filter
-    let query = 'SELECT * FROM training_examples'
-    const params: any[] = []
-
-    if (filter !== 'all') {
-      query += ' WHERE status = $1'
-      params.push(filter)
-    }
-
-    query += ' ORDER BY created_at DESC LIMIT 100'
-
-    const result = await client.query(query, params)
-
-    await client.end()
+    const result: any = filter !== 'all'
+      ? await prisma.$queryRaw`
+          SELECT * FROM training_examples
+          WHERE status = ${filter}
+          ORDER BY created_at DESC
+          LIMIT 100
+        `
+      : await prisma.$queryRaw`
+          SELECT * FROM training_examples
+          ORDER BY created_at DESC
+          LIMIT 100
+        `
 
     return Response.json({
-      examples: result.rows,
+      examples: result,
       stats: {
-        total: parseInt(stats.total),
-        pending: parseInt(stats.pending),
-        approved: parseInt(stats.approved),
-        rejected: parseInt(stats.rejected),
+        total: Number(stats.total),
+        pending: Number(stats.pending),
+        approved: Number(stats.approved),
+        rejected: Number(stats.rejected),
       },
     })
   } catch (error) {
@@ -60,20 +53,11 @@ export async function PATCH(req: Request) {
       return Response.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) return Response.json({ error: 'Database not configured' }, { status: 500 })
-
-    const client = new Client({ connectionString: dbUrl })
-    await client.connect()
-
-    await client.query(
-      `UPDATE training_examples 
-       SET status = $1, notes = $2, reviewed_at = NOW()
-       WHERE id = $3`,
-      [status, notes || '', id]
-    )
-
-    await client.end()
+    await prisma.$executeRaw`
+      UPDATE training_examples
+      SET status = ${status}, notes = ${notes || ''}, reviewed_at = NOW()
+      WHERE id = ${id}
+    `
 
     return Response.json({ success: true })
   } catch (error) {

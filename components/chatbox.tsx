@@ -8,6 +8,7 @@ import { useUser } from "@/context/user-context"
 import { useChat } from "@/context/chat-context"
 import { useTasks } from "@/context/task-context"
 import { useWorkspace } from "@/context/workspace-context"
+import { useEvents } from "@/context/events-context"
 import { useState, useCallback } from "react"
 import type { ChatMessage } from "@/context/chat-context"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -32,6 +33,7 @@ export function Chatbox() {
   const { industry, userName, userData } = useUser()
   const { conversations, currentConversation, currentConversationId, addMessage, createConversation, deleteConversation, switchConversation } = useChat()
   const { addTask } = useTasks()
+  const { addEvent } = useEvents()
   const { currentWorkspace, workspaces } = useWorkspace()
   const [inputValue, setInputValue] = useState("")
   const [showHistory, setShowHistory] = useState(false)
@@ -187,12 +189,12 @@ export function Chatbox() {
   }
 
   const handleTasksExtracted = useCallback(
-    (tasks: Array<{ title: string; category: string; priority: string; time: string; date?: Date }>) => {
+    async (tasks: Array<{ title: string; category: string; priority: string; time: string; date?: Date }>) => {
       const targetWorkspaceId = selectedWorkspace || currentWorkspace?.id
       const targetWorkspace = workspaces.find(w => w.id === targetWorkspaceId)
       
-      tasks.forEach((task) => {
-        addTask({
+      await Promise.all(tasks.map(async (task) => {
+        await addTask({
           title: task.title,
           category: task.category,
           priority: (task.priority as "High" | "Medium" | "Low" | "Urgent"),
@@ -201,7 +203,23 @@ export function Chatbox() {
           dueDate: task.date ? task.date.toISOString().split('T')[0] : undefined,
           workspaceId: targetWorkspaceId, // Use selected or current workspace
         })
-      })
+
+        // Automatically create calendar event if task has a date
+        if (task.date) {
+          try {
+            await addEvent({
+              title: task.title,
+              date: task.date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+              time: "09:00", // Default time
+              type: "meeting",
+              location: undefined,
+              attendees: undefined
+            })
+          } catch (error) {
+            console.error("Failed to create calendar event:", error)
+          }
+        }
+      }))
       setShowAIExtractor(false)
       setSelectedWorkspace(null) // Reset selection after use
       
@@ -219,7 +237,7 @@ export function Chatbox() {
       }
       addMessage(message)
     },
-    [addTask, addMessage, currentWorkspace, selectedWorkspace, workspaces]
+    [addTask, addEvent, addMessage, currentWorkspace, selectedWorkspace, workspaces]
   )
 
   return (
