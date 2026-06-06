@@ -44,6 +44,8 @@ test-*.js
 
 # AI Models and large files
 python/models/
+python/models.zip
+*.zip
 *.safetensors
 *.pt
 *.pth
