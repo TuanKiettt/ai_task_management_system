@@ -8,39 +8,10 @@ import { useUser } from "@/context/user-context"
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoggedIn } = useUser()
-  const [isLoading, setIsLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const [userContextReady, setUserContextReady] = useState(false)
+  const { isLoggedIn, isReady } = useUser()
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Check if user context has initialized by checking localStorage
-  useEffect(() => {
-    if (mounted) {
-      const checkUserContext = () => {
-        const hasUserData = localStorage.getItem("user-data")
-        const hasIndustry = localStorage.getItem("user-industry")
-        
-        // Set ready regardless of whether user data exists
-        // This allows the loading screen to dismiss even for non-logged-in users
-        setUserContextReady(true)
-        setIsLoading(false)
-      }
-
-      // Check immediately
-      checkUserContext()
-
-      // Also check after a short delay in case localStorage is being populated
-      const timer = setTimeout(checkUserContext, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [mounted])
-
-  useEffect(() => {
-    if (!mounted || !userContextReady) return
+    if (!isReady) return
     
     const publicRoutes = ["/auth/login", "/auth/register", "/auth"]
     const isPublicRoute = publicRoutes.includes(pathname)
@@ -53,9 +24,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       console.log('Redirecting to home - already logged in')
       router.push("/")
     }
-  }, [isLoggedIn, pathname, router, mounted, userContextReady])
+  }, [isLoggedIn, pathname, router, isReady])
 
-  if (isLoading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-[#050B24] flex items-center justify-center">
         <div className="text-center">

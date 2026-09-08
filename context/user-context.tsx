@@ -22,6 +22,7 @@ interface UserContextType {
   userData: UserData | null
   setUserData: (data: UserData) => void
   isLoggedIn: boolean
+  isReady: boolean
   logout: () => void
 }
 
@@ -33,15 +34,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [userData, setUserDataState] = useState<UserData | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-    
     const savedUserData = localStorage.getItem("user-data")
     const savedIndustry = localStorage.getItem("user-industry") as Industry
 
@@ -60,8 +55,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("user-industry")
       }
     }
-    // Removed auto-create mock user - user must login manually
-  }, [mounted])
+    setIsReady(true)
+  }, [])
 
   const setIndustry = (newIndustry: Industry) => {
     setIndustryState(newIndustry)
@@ -97,7 +92,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ industry, setIndustry, userName, userId, userData, setUserData, isLoggedIn, logout }}>
+    <UserContext.Provider value={{ industry, setIndustry, userName, userId, userData, setUserData, isLoggedIn, isReady, logout }}>
       {children}
     </UserContext.Provider>
   )

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import prisma from "@/lib/prisma"
 import { emailService } from "@/lib/email-service"
+import { hashPassword } from "@/lib/auth"
 
 // Store reset tokens (in production, use Redis)
 const resetTokens = new Map<string, { email: string; expires: number }>()
@@ -63,6 +64,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Token and new password are required" }, { status: 400 })
     }
 
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      return NextResponse.json({ error: "Mật khẩu phải có ít nhất 6 ký tự" }, { status: 400 })
+    }
+
     // Check if token exists and is valid
     const resetData = resetTokens.get(token)
     
@@ -79,10 +84,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Update password (in production, hash the password)
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: newPassword } // TODO: Hash password
+      data: { password: await hashPassword(newPassword) }
     })
 
     // Remove used token

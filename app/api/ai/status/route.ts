@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Check AI model status - Simplified version
- */
 export async function GET() {
   try {
-    // Simplified status check - assume models are available for now
-    const modelsLoaded = true; // We're using rule-based intelligence which works well
+    const configured = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
     
     return NextResponse.json({
       success: true,
       status: {
-        loaded: modelsLoaded,
-        categoryModel: true,
-        priorityModel: true,
-        mode: 'intelligent-rule-based'
+        loaded: configured,
+        provider: 'Google Gemini',
+        model: 'gemini-2.0-flash',
+        mode: 'api',
       },
-      message: modelsLoaded 
-        ? 'AI intelligence system active' 
-        : 'AI system offline'
+      message: configured ? 'Gemini AI is configured' : 'Gemini API key is not configured'
     });
 
   } catch (error) {
@@ -27,8 +21,7 @@ export async function GET() {
       success: false,
       status: {
         loaded: false,
-        categoryModel: false,
-        priorityModel: false
+        provider: 'Google Gemini',
       },
       error: 'Failed to check model status',
       message: 'Error checking status'

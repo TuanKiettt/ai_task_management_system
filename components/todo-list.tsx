@@ -47,6 +47,13 @@ export function TodoList() {
   const [showSearch, setShowSearch] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [filterPriority, setFilterPriority] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [workspaceFilter, setWorkspaceFilter] = useState("all")
+  const [showClosed, setShowClosed] = useState(false)
+  const [groupBy, setGroupBy] = useState<"status" | "priority" | "category">("status")
+  const [openMenu, setOpenMenu] = useState<"group" | "filter" | "workspace" | "columns" | null>(null)
+  const [visibleColumns, setVisibleColumns] = useState({ workspace: true, dueDate: true, priority: true, status: true, subtasks: false })
 
   // Function to get workspace display name
   const getWorkspaceDisplayName = (task: Task): string => {
@@ -66,11 +73,27 @@ export function TodoList() {
 
   // Filter tasks based on search query
   const filteredTasks = tasks.filter(task => 
-    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    task.category.toLowerCase().includes(searchQuery.toLowerCase())
+    (task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.category.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (showClosed || task.status !== "done") &&
+    (filterPriority === "all" || task.priority === filterPriority) &&
+    (filterStatus === "all" || task.status === filterStatus) &&
+    (workspaceFilter === "all" || (workspaceFilter === "individual" ? !task.workspaceId : task.workspaceId === workspaceFilter))
   )
 
   const filteredGroupedTasks = filteredTasks.reduce((acc, task) => {
+    if (!acc[task.status]) acc[task.status] = []
+    acc[task.status].push(task)
+    return acc
+  }, {} as Record<GroupKey, Task[]>)
+
+  const sortedFilteredTasks = [...filteredTasks].sort((left, right) => {
+    if (groupBy === "priority") return Object.keys(priorityConfig).indexOf(left.priority) - Object.keys(priorityConfig).indexOf(right.priority)
+    if (groupBy === "category") return left.category.localeCompare(right.category)
+    return left.status.localeCompare(right.status)
+  })
+
+  const sortedFilteredGroupedTasks = sortedFilteredTasks.reduce((acc, task) => {
     if (!acc[task.status]) acc[task.status] = []
     acc[task.status].push(task)
     return acc
@@ -129,33 +152,33 @@ export function TodoList() {
   return (
     <div className="flex-1 space-y-0">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 px-1 border-b border-border">
+      <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 px-1 border-b border-border">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-medium bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+          <Button variant="outline" size="sm" onClick={() => setOpenMenu(openMenu === "group" ? null : "group")} className="h-8 gap-1.5 text-xs font-medium bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
             <Circle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Group:</span> Status
+            <span className="hidden sm:inline">Group:</span> {groupBy[0].toUpperCase() + groupBy.slice(1)}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground hidden sm:flex">
+          <Button variant="ghost" size="sm" onClick={() => setVisibleColumns(prev => ({ ...prev, subtasks: !prev.subtasks }))} className={cn("h-8 gap-1.5 text-xs hidden sm:flex", visibleColumns.subtasks ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground")}>
             <Settings2 className="w-3.5 h-3.5" />
-            Subtasks
+            Subtasks {visibleColumns.subtasks ? "On" : "Off"}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground hidden sm:flex">
+          <Button variant="ghost" size="sm" onClick={() => setOpenMenu(openMenu === "columns" ? null : "columns")} className="h-8 gap-1.5 text-xs text-muted-foreground hidden sm:flex">
             <Settings2 className="w-3.5 h-3.5" />
             Columns
           </Button>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={() => setOpenMenu(openMenu === "filter" ? null : "filter")} className={cn("h-8 gap-1.5 text-xs", filterPriority !== "all" || filterStatus !== "all" ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground")}>
             <Filter className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Filter</span>
+            <span className="hidden sm:inline">Filter</span>{filterPriority !== "all" || filterStatus !== "all" ? " *" : ""}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground hidden md:flex">
+          <Button variant="ghost" size="sm" onClick={() => setShowClosed(prev => !prev)} className={cn("h-8 gap-1.5 text-xs hidden md:flex", showClosed ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground")}>
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Closed
+            {showClosed ? "Hide Closed" : "Closed"}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground hidden md:flex">
+          <Button variant="ghost" size="sm" onClick={() => setOpenMenu(openMenu === "workspace" ? null : "workspace")} className={cn("h-8 max-w-40 gap-1.5 truncate text-xs hidden md:flex", workspaceFilter !== "all" ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground")}>
             <User className="w-3.5 h-3.5" />
-            Workspace
+            {workspaceFilter === "all" ? "Workspace" : workspaces.find(workspace => workspace.id === workspaceFilter)?.name || "Individual"}
           </Button>
           {showSearch ? (
             <div className="relative">
@@ -187,10 +210,42 @@ export function TodoList() {
               <Search className="w-4 h-4" />
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground hidden lg:flex">
+          <Button variant="ghost" size="sm" onClick={() => setOpenMenu(openMenu === "columns" ? null : "columns")} className="h-8 gap-1.5 text-xs text-muted-foreground hidden lg:flex">
             <Settings2 className="w-3.5 h-3.5" />
             Customize
           </Button>
+
+          {openMenu === "group" && (
+            <div className="absolute left-1 top-full z-30 mt-2 min-w-44 rounded-lg border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl shadow-black/10">
+              <p className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Group tasks by</p>
+              {(["status", "priority", "category"] as const).map(option => (
+                <button key={option} onClick={() => { setGroupBy(option); setOpenMenu(null) }} className={cn("block w-full rounded-md px-3 py-2 text-left capitalize transition-colors hover:bg-muted", groupBy === option && "bg-primary/10 font-medium text-primary")}>
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
+          {openMenu === "filter" && (
+            <div className="absolute right-1 top-full z-30 mt-2 grid w-56 gap-3 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-xl shadow-black/10">
+              <div className="flex items-center justify-between"><p className="font-semibold">Filter tasks</p><button onClick={() => { setFilterStatus("all"); setFilterPriority("all") }} className="text-xs text-primary hover:underline">Clear</button></div>
+              <label className="grid gap-1 text-xs font-medium text-muted-foreground">Status<select value={filterStatus} onChange={event => setFilterStatus(event.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm font-normal text-foreground outline-none focus:ring-2 focus:ring-ring"><option value="all">All statuses</option>{statusOrder.map(status => <option key={status} value={status}>{statusConfig[status].label}</option>)}</select></label>
+              <label className="grid gap-1 text-xs font-medium text-muted-foreground">Priority<select value={filterPriority} onChange={event => setFilterPriority(event.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm font-normal text-foreground outline-none focus:ring-2 focus:ring-ring"><option value="all">All priorities</option>{Object.keys(priorityConfig).map(priority => <option key={priority}>{priority}</option>)}</select></label>
+            </div>
+          )}
+          {openMenu === "workspace" && (
+            <div className="absolute right-1 top-full z-30 mt-2 grid max-h-72 min-w-52 gap-1 overflow-y-auto rounded-lg border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl shadow-black/10">
+              <p className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Show tasks from</p>
+              <button onClick={() => { setWorkspaceFilter("all"); setOpenMenu(null) }} className={cn("rounded-md px-3 py-2 text-left hover:bg-muted", workspaceFilter === "all" && "bg-primary/10 font-medium text-primary")}>All workspaces</button>
+              <button onClick={() => { setWorkspaceFilter("individual"); setOpenMenu(null) }} className={cn("rounded-md px-3 py-2 text-left hover:bg-muted", workspaceFilter === "individual" && "bg-primary/10 font-medium text-primary")}>Individual tasks</button>
+              {workspaces.map(workspace => <button key={workspace.id} onClick={() => { setWorkspaceFilter(workspace.id); setOpenMenu(null) }} className={cn("truncate rounded-md px-3 py-2 text-left hover:bg-muted", workspaceFilter === workspace.id && "bg-primary/10 font-medium text-primary")}>{workspace.name}</button>)}
+            </div>
+          )}
+          {openMenu === "columns" && (
+            <div className="absolute right-1 top-full z-30 mt-2 grid min-w-44 gap-1 rounded-lg border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl shadow-black/10">
+              <p className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Visible columns</p>
+              {Object.entries(visibleColumns).map(([column, enabled]) => <label key={column} className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 capitalize hover:bg-muted"><input type="checkbox" className="accent-primary" checked={enabled} onChange={() => setVisibleColumns(prev => ({ ...prev, [column]: !enabled }))} />{column}</label>)}
+            </div>
+          )}
           <Button
             size="sm"
             className="h-8 gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
@@ -213,7 +268,9 @@ export function TodoList() {
         {statusOrder.map((status) => {
           const config = statusConfig[status]
           const StatusIcon = config.icon
-          const groupTasks = (searchQuery.trim() ? filteredGroupedTasks : groupedTasks)[status] || []
+                      const groupTasks = (searchQuery.trim() || filterPriority !== "all" || filterStatus !== "all" || workspaceFilter !== "all" || !showClosed || groupBy !== "status"
+                        ? sortedFilteredGroupedTasks
+                        : groupedTasks)[status] || []
           const isExpanded = expandedGroups.includes(status)
 
           return (
@@ -240,10 +297,11 @@ export function TodoList() {
                   {/* Table Header - hidden on mobile */}
                   <div className="hidden md:grid grid-cols-[1fr_80px_100px_70px_100px_60px_32px] gap-2 px-10 py-2 text-xs font-medium text-muted-foreground border-b border-border">
                     <div>Name</div>
-                    <div className="text-center">Workspace</div>
-                    <div className="text-center">Due date</div>
-                    <div className="text-center">Priority</div>
-                    <div className="text-center">Status</div>
+                    <div className={cn("text-center", !visibleColumns.workspace && "hidden")}>Workspace</div>
+                    <div className={cn("text-center", !visibleColumns.dueDate && "hidden")}>Due date</div>
+                    <div className={cn("text-center", !visibleColumns.priority && "hidden")}>Priority</div>
+                    <div className={cn("text-center", !visibleColumns.status && "hidden")}>Status</div>
+                    <div className={cn("text-center", !visibleColumns.subtasks && "hidden")}>Subtasks</div>
                     <div className="text-center">Comments</div>
                     <div></div>
                   </div>
@@ -277,13 +335,13 @@ export function TodoList() {
                           )}
                         </div>
                         {/* Workspace */}
-                        <div className="hidden md:flex justify-center">
+                          <div className={cn("hidden md:flex justify-center", !visibleColumns.workspace && "md:hidden")}>
                           <span className="text-xs text-muted-foreground truncate max-w-[70px]">
                             {getWorkspaceDisplayName(task)}
                           </span>
                         </div>
                         {/* Due date */}
-                        <div className="hidden md:flex justify-center">
+                        <div className={cn("hidden md:flex justify-center", !visibleColumns.dueDate && "md:hidden")}>
                           <span className={cn(
                             "text-xs",
                             task.dueDate && task.dueDate < new Date().toISOString().split("T")[0] && task.status !== "done"
@@ -294,15 +352,19 @@ export function TodoList() {
                           </span>
                         </div>
                         {/* Priority */}
-                        <div className="hidden md:flex justify-center">
+                        <div className={cn("hidden md:flex justify-center", !visibleColumns.priority && "md:hidden")}>
                           <Flag className={cn("w-4 h-4", priorityConfig[task.priority]?.color || "text-muted-foreground/30")} />
                         </div>
                         {/* Status Badge */}
-                        <div className="hidden md:flex justify-center">
+                        <div className={cn("hidden md:flex justify-center", !visibleColumns.status && "md:hidden")}>
                           <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium", taskConfig.bgColor, taskConfig.color)}>
                             <TaskStatusIcon className={cn("w-3 h-3", task.status === "processing" && "animate-spin")} />
                             <span className="hidden lg:inline">{taskConfig.label}</span>
                           </div>
+                        </div>
+                        {/* Subtasks */}
+                        <div className={cn("hidden md:flex justify-center text-xs text-muted-foreground", !visibleColumns.subtasks && "md:hidden")}>
+                          {task.subtasks?.completed || 0}/{task.subtasks?.total || 0}
                         </div>
                         {/* Comments */}
                         <div className="hidden md:flex justify-center">

@@ -65,7 +65,7 @@ export default function LoginPage() {
         createdAt: data.user.createdAt,
       })
 
-      router.push("/dashboard")
+      router.push("/")
     } catch (err) {
       console.error("Login error:", err)
       setError("Đã xảy ra lỗi, vui lòng thử lại")

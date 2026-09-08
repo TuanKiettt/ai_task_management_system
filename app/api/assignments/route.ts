@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for assignments
-let assignments: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,10 +10,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Filter assignments by user ID
-    const userAssignments = assignments.filter(a => a.userId === userId)
-    
-    return NextResponse.json(userAssignments)
+    const assignments = await prisma.assignment.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(assignments)
   } catch (error) {
     console.error('Error fetching assignments:', error)
     return NextResponse.json({ error: 'Failed to fetch assignments' }, { status: 500 })
@@ -31,17 +30,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create new assignment
-    const newAssignment = {
-      id: Date.now().toString(),
-      ...assignment,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    // Add to mock database
-    assignments.push(newAssignment)
-    
+    const newAssignment = await prisma.assignment.create({
+      data: {
+        userId: assignment.userId,
+        title: assignment.title,
+        subject: assignment.subject,
+        dueDate: assignment.dueDate,
+        status: assignment.status || 'pending',
+        grade: assignment.grade,
+        description: assignment.description,
+      },
+    })
     return NextResponse.json(newAssignment, { status: 201 })
   } catch (error) {
     console.error('Error creating assignment:', error)

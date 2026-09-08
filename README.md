@@ -44,15 +44,13 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 - **WebSocket**: Real-time communication
 
 ### AI Integration
-- **Local AI Service**: On-premise AI processing
-- **Python Scripts**: AI model training and processing
+- **AI Integration**: Google Gemini API via Vercel AI SDK
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+ 
 - MySQL database
-- Python 3.8+ (for AI features)
 
 ### Installation
 
@@ -79,11 +77,6 @@ A comprehensive full-stack application that combines AI-powered task extraction 
    npm run db:push
    ```
 
-5. **Install Python dependencies for AI features**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
 ### Development
 
 1. **Start the development server**
@@ -100,15 +93,6 @@ A comprehensive full-stack application that combines AI-powered task extraction 
 - **Generate Prisma client**: `npm run db:generate`
 - **Push schema changes**: `npm run db:push`
 
-### AI Training
-
-Train the AI model with custom data:
-```bash
-npm run ai-train
-```
-
-This will run the `train_mslatte.py` script to train models with the MS-LaTTE dataset.
-
 ## Project Structure
 
 ```
@@ -124,7 +108,6 @@ This will run the `train_mslatte.py` script to train models with the MS-LaTTE da
 ├── lib/               # Utility functions
 ├── prisma/            # Database schema and migrations
 ├── public/            # Static assets
-├── python/            # AI processing scripts
 └── styles/            # Global styles
 ```
 
@@ -165,9 +148,9 @@ Key environment variables to configure:
 
 ```env
 DATABASE_URL=mysql://root:@localhost:3306/task_management
+GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
-AI_SERVICE_ENDPOINT=...
 ```
 
 ## Contributing

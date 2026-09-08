@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for projects
-let projects: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,84 +11,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Filter projects by user ID and industry
-    let userProjects = projects.filter(p => p.userId === userId)
-    
-    // If no projects in DB, return fallback data based on industry
-    if (userProjects.length === 0) {
-      const fallbackProjects = industry === "corporate" ? [
-        {
-          id: "1",
-          userId,
-          name: "Digital Transformation Initiative",
-          status: "In Progress",
-          progress: 65,
-          team: 8,
-          deadline: "May 30, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        { 
-          id: "2", 
-          userId,
-          name: "Market Expansion Q2", 
-          status: "Planning", 
-          progress: 25, 
-          team: 5, 
-          deadline: "Jun 15, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        { 
-          id: "3", 
-          userId,
-          name: "Product Launch Campaign", 
-          status: "In Progress", 
-          progress: 80, 
-          team: 12, 
-          deadline: "May 20, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ] : [
-        { 
-          id: "4", 
-          userId,
-          name: "Brand Identity Redesign", 
-          status: "In Progress", 
-          progress: 70, 
-          team: 4, 
-          deadline: "May 25, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        { 
-          id: "5", 
-          userId,
-          name: "Social Media Campaign", 
-          status: "Review", 
-          progress: 90, 
-          team: 3, 
-          deadline: "May 15, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        { 
-          id: "6", 
-          userId,
-          name: "Website Mockups", 
-          status: "In Progress", 
-          progress: 45, 
-          team: 2, 
-          deadline: "Jun 1, 2025",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ]
-      return NextResponse.json(fallbackProjects)
-    }
-    
-    return NextResponse.json(userProjects)
+    const projects = await prisma.project.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(projects)
   } catch (error) {
     console.error('Error fetching projects:', error)
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
@@ -106,17 +31,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create new project
-    const newProject = {
-      id: Date.now().toString(),
-      ...project,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    // Add to mock database
-    projects.push(newProject)
-    
+    const newProject = await prisma.project.create({
+      data: {
+        userId: project.userId,
+        workspaceId: project.workspaceId,
+        name: project.name,
+        status: project.status || 'Planning',
+        progress: Number(project.progress || 0),
+        team: Number(project.team || 0),
+        deadline: project.deadline,
+      },
+    })
     return NextResponse.json(newProject, { status: 201 })
   } catch (error) {
     console.error('Error creating project:', error)

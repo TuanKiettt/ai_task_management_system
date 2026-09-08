@@ -23,7 +23,7 @@ import {
 
 export default function WorkspacesPage() {
   const router = useRouter()
-  const { userId } = useUser()
+  const { userId, isReady } = useUser()
   const { workspaces, createWorkspace } = useWorkspace()
   
   const [loading, setLoading] = useState(true)
@@ -32,10 +32,10 @@ export default function WorkspacesPage() {
   const [filterType, setFilterType] = useState<'all' | 'owner' | 'member'>('all')
 
   useEffect(() => {
-    if (userId) {
+    if (isReady) {
       setLoading(false)
     }
-  }, [userId])
+  }, [isReady])
 
   const filteredWorkspaces = workspaces.filter(workspace => {
     const matchesSearch = workspace.name.toLowerCase().includes(searchQuery.toLowerCase())

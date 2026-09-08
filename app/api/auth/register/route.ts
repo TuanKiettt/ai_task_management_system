@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-// import { hashPassword } from "@/lib/auth"
+import { hashPassword } from "@/lib/auth"
 
 // Type stub for development (until Prisma is fully set up)
 type Industry = "education" | "corporate" | "creative" | "medical"
@@ -18,6 +18,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (typeof password !== "string" || password.length < 6) {
+      return NextResponse.json(
+        { error: "Mật khẩu phải có ít nhất 6 ký tự" },
+        { status: 400 }
+      )
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -30,14 +37,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Hash password in production
-    // const hashedPassword = await hashPassword(password)
+    const hashedPassword = await hashPassword(password)
 
     // Create user with default settings
     const user = await prisma.user.create({
       data: {
         email,
-        password, // TODO: Use hashedPassword in production
+        password: hashedPassword,
         fullName,
         industry: industry as Industry,
         settings: {

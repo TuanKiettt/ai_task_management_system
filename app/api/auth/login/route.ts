@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getTwoFactorByUserId } from "@/lib/totp-service"
-// import { hashPassword, verifyPassword } from "@/lib/auth"
+import { hashPassword, verifyPassword } from "@/lib/auth"
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,12 +19,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email hoặc mật khẩu không đúng" }, { status: 401 })
     }
 
-    // TODO: Replace with proper password verification in production
-    // For now, compare plain text passwords (not secure for production)
-    const passwordMatch = user.password === password
+    const isLegacyPassword = !user.password.startsWith("$2")
+    const passwordMatch = isLegacyPassword
+      ? user.password === password
+      : await verifyPassword(password, user.password)
 
     if (!passwordMatch) {
       return NextResponse.json({ error: "Mật khẩu không đúng" }, { status: 401 })
+    }
+
+    // Upgrade legacy plaintext passwords after a successful login.
+    if (isLegacyPassword) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: await hashPassword(password) },
+      })
     }
 
     // Check if user has 2FA enabled

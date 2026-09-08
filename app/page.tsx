@@ -1,21 +1,49 @@
 "use client"
 
-import { useState } from "react"
+import dynamic from "next/dynamic"
+import { startTransition, useMemo, useState } from "react"
 import { Header } from "@/components/header"
 import { FloatingChat, FloatingChatButton } from "@/components/floating-chat"
 import { TodoList } from "@/components/todo-list"
-import { CalendarView } from "@/components/calendar-view"
-import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { OverdueTasksWarning } from "@/components/overdue-tasks-warning"
 import { useUser } from "@/context/user-context"
+import { useTasks } from "@/context/task-context"
 import { Onboarding } from "@/components/onboarding"
 import { CorporateDashboard, CreativeDashboard, MedicalDashboard } from "@/components/industry-dashboards"
 import { BarChart3, List, Calendar, Kanban } from "lucide-react"
 
+const CalendarView = dynamic(() => import("@/components/calendar-view").then(module => module.CalendarView), {
+  loading: () => <ViewLoading />,
+})
+const AnalyticsDashboard = dynamic(() => import("@/components/analytics-dashboard").then(module => module.AnalyticsDashboard), {
+  loading: () => <ViewLoading />,
+})
+const KanbanBoard = dynamic(() => import("@/components/kanban-board").then(module => module.KanbanBoard), {
+  loading: () => <ViewLoading />,
+})
+
+function ViewLoading() {
+  return <div className="min-h-[420px] animate-pulse rounded-xl border border-border bg-card/60" aria-label="Loading view" />
+}
+
 export default function AlbaDashboard() {
   const { industry, userName } = useUser()
+  const { tasks, updateTask } = useTasks()
   const [currentView, setCurrentView] = useState("list")
+  const [visitedViews, setVisitedViews] = useState<string[]>(["list"])
   const [chatOpen, setChatOpen] = useState(false)
+
+  const boardTasks = useMemo(() => tasks.map(task => ({
+    ...task,
+    createdAt: task.createdAt.toISOString(),
+  })), [tasks])
+
+  const selectView = (view: string) => {
+    startTransition(() => {
+      setCurrentView(view)
+      setVisitedViews(previous => previous.includes(view) ? previous : [...previous, view])
+    })
+  }
 
   if (!industry) {
     return <Onboarding />
@@ -40,7 +68,7 @@ export default function AlbaDashboard() {
             return (
               <button
                 key={view.id}
-                onClick={() => setCurrentView(view.id)}
+                onClick={() => selectView(view.id)}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   currentView === view.id
                     ? "border-violet-600 text-violet-600"
@@ -61,10 +89,10 @@ export default function AlbaDashboard() {
         
         {industry === "education" && (
           <>
-            {currentView === "list" && <TodoList />}
-            {currentView === "calendar" && <CalendarView />}
-            {currentView === "analytics" && <AnalyticsDashboard />}
-            {currentView === "board" && <TodoList />}
+            {visitedViews.includes("list") && <div hidden={currentView !== "list"}><TodoList /></div>}
+            {visitedViews.includes("calendar") && <div hidden={currentView !== "calendar"}><CalendarView /></div>}
+            {visitedViews.includes("analytics") && <div hidden={currentView !== "analytics"}><AnalyticsDashboard /></div>}
+            {visitedViews.includes("board") && <div hidden={currentView !== "board"}><KanbanBoard tasks={boardTasks} onTaskUpdate={updateTask} /></div>}
           </>
         )}
         {industry === "corporate" && <CorporateDashboard />}

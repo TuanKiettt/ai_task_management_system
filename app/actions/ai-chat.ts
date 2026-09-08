@@ -1,6 +1,7 @@
 'use server'
 
 import { streamText } from 'ai'
+import { google } from '@ai-sdk/google'
 
 export async function chat(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -56,7 +57,7 @@ Be encouraging and specific. Provide concrete, immediately actionable advice.`,
   const systemPrompt = systemPrompts[mode]
 
   const result = streamText({
-    model: 'openai/gpt-4o-mini',
+    model: google('gemini-2.0-flash'),
     system: systemPrompt,
     messages: messages.map((msg) => ({
       role: msg.role,

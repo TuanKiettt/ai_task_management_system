@@ -108,7 +108,7 @@ export default function RegisterPage() {
         createdAt: data.user.createdAt,
       })
 
-      router.push("/dashboard")
+      router.push("/")
     } catch (err) {
       console.error("Registration error:", err)
       setError("Đã xảy ra lỗi, vui lòng thử lại")

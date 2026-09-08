@@ -1,4 +1,5 @@
 import { generateText, Output } from "ai"
+import { google } from "@ai-sdk/google"
 import { z } from "zod"
 import prisma from '@/lib/prisma'
 
@@ -197,7 +198,7 @@ export async function POST(req: Request) {
     }
 
     const { output } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: google("gemini-2.0-flash"),
       output: Output.object({
         schema: taskSchema,
       }),

@@ -88,7 +88,7 @@ export default function WorkspacePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+              <Button variant="ghost" onClick={() => router.push('/')}>
                 Back
               </Button>
               <div>

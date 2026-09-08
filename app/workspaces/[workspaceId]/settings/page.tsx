@@ -83,7 +83,7 @@ export default function WorkspaceSettingsPage() {
 
     try {
       await deleteWorkspace(currentWorkspace.id)
-      router.push('/dashboard')
+      router.push('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete workspace')
     }

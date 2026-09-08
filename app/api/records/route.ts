@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for records
-let records: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,10 +10,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Filter records by user ID
-    const userRecords = records.filter(r => r.userId === userId)
-    
-    return NextResponse.json(userRecords)
+    const records = await prisma.medicalRecord.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(records)
   } catch (error) {
     console.error('Error fetching records:', error)
     return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 })
@@ -31,17 +30,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create new record
-    const newRecord = {
-      id: Date.now().toString(),
-      ...record,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    // Add to mock database
-    records.push(newRecord)
-    
+    const newRecord = await prisma.medicalRecord.create({
+      data: {
+        userId: record.userId,
+        patient: record.patient,
+        type: record.type,
+        date: record.date,
+        status: record.status || 'Pending Review',
+      },
+    })
     return NextResponse.json(newRecord, { status: 201 })
   } catch (error) {
     console.error('Error creating record:', error)

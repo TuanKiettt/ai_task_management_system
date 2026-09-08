@@ -131,6 +131,10 @@ model User {
   createdChats  WorkspaceChat[] @relation("ChatCreator")
   chatMessages  WorkspaceChatMessage[]
   chatMemberships WorkspaceChatMember[]
+  assignments   Assignment[]
+  projects      Project[]
+  medicalRecords MedicalRecord[]
+  scheduledReports ScheduledReport[]
 
   @@map("users")
 }
@@ -150,6 +154,80 @@ model UserSettings {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  subject     String
+  dueDate     String
+  status      String   @default("pending")
+  grade       String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("assignments")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String?
+  name        String
+  status      String   @default("Planning")
+  progress    Int      @default(0)
+  team        Int      @default(0)
+  deadline    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+model MedicalRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  patient   String
+  type      String
+  date      String
+  status    String   @default("Pending Review")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("records")
+}
+
+model ScheduledReport {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String?
+  name        String
+  description String   @default("")
+  reportType  String
+  frequency   String   @default("weekly")
+  recipients  String   @default("[]")
+  format      String   @default("pdf")
+  nextRun     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([isActive])
+  @@map("scheduled_reports")
 }
 
 model Task {

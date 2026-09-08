@@ -261,11 +261,11 @@ export function KanbanBoard({
       {/* Kanban Board */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          <div className="flex gap-4 overflow-x-auto">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {columns.map((column) => (
               <div
                 key={column.id}
-                className={`flex-shrink-0 w-80 min-w-[300px] max-w-[400px]`}
+                className="min-w-0"
                 onDragOver={handleDragOver}
                 onDragEnter={(e) => handleDragEnter(e, column.id)}
                 onDragLeave={handleDragLeave}

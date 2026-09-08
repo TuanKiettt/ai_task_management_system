@@ -11,7 +11,6 @@ import { useTasks } from "@/context/task-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import type { ChatMessage } from "@/context/chat-context"
-import { extractTasksWithLocalAI } from "@/lib/local-ai-service"
 import { HydrationWrapper } from "@/components/hydration-wrapper"
 import {
   DropdownMenu,
@@ -118,16 +117,31 @@ export function FloatingChat({ isOpen, onClose }: FloatingChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [currentConversation?.messages])
 
-  // Generate AI responses using Local AI Service
+  // Generate AI responses using the Gemini-backed API
   const generateAIResponse = useCallback(async (userMessage: string, mode: AIMode): Promise<string> => {
     try {
-      // Use Local AI for task generation
       if (mode === "task-generate") {
-        const response = await extractTasksWithLocalAI(userMessage)
-        return response
+        const response = await fetch("/api/ai/persistent-true-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage, userId: userData?.id || "anonymous" }),
+        })
+        const data = await response.json()
+
+        if (!response.ok || !data.success || !data.task) {
+          throw new Error(data.error || "Task extraction failed")
+        }
+
+        return `I found 1 task in your message:\n[
+  {
+    "title": "${data.task.title}",
+    "category": "${data.task.category}",
+    "priority": "${data.task.priority}",
+    "estimatedTime": "${data.task.time}"
+  }
+]\n\nDue date: ${data.task.date || "Not specified"}\n\n(Gemini AI)\nConfidence: ${data.confidence || 0.85}`
       }
       
-      // For other modes, use mock responses (can be extended to use local AI later)
       switch (mode) {
         case "smart-schedule":
           return generateScheduleResponse(userMessage)
@@ -138,7 +152,7 @@ export function FloatingChat({ isOpen, onClose }: FloatingChatProps) {
       }
       
     } catch (error) {
-      console.error('Local AI Error:', error)
+      console.error('AI request error:', error)
       
       // Simple fallback for task generation
       if (mode === "task-generate") {

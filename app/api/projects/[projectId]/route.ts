@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for projects
-let projects: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
@@ -11,21 +9,18 @@ export async function PUT(
     const projectId = params.projectId
     const updates = await request.json()
 
-    // Find and update project
-    const projectIndex = projects.findIndex(p => p.id === projectId)
-    
-    if (projectIndex === -1) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    // Update project
-    projects[projectIndex] = {
-      ...projects[projectIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }
-
-    return NextResponse.json(projects[projectIndex])
+    const project = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        ...(updates.name !== undefined && { name: updates.name }),
+        ...(updates.status !== undefined && { status: updates.status }),
+        ...(updates.progress !== undefined && { progress: Number(updates.progress) }),
+        ...(updates.team !== undefined && { team: Number(updates.team) }),
+        ...(updates.deadline !== undefined && { deadline: updates.deadline }),
+        ...(updates.workspaceId !== undefined && { workspaceId: updates.workspaceId }),
+      },
+    })
+    return NextResponse.json(project)
   } catch (error) {
     console.error('Error updating project:', error)
     return NextResponse.json({ error: 'Failed to update project' }, { status: 500 })
@@ -39,16 +34,7 @@ export async function DELETE(
   try {
     const projectId = params.projectId
 
-    // Find and delete project
-    const projectIndex = projects.findIndex(p => p.id === projectId)
-    
-    if (projectIndex === -1) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    // Remove project
-    projects.splice(projectIndex, 1)
-
+    await prisma.project.delete({ where: { id: projectId } })
     return NextResponse.json({ message: 'Project deleted successfully' })
   } catch (error) {
     console.error('Error deleting project:', error)

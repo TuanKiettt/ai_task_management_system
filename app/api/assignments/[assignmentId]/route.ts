@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for assignments
-let assignments: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
@@ -11,21 +9,11 @@ export async function PUT(
     const assignmentId = params.assignmentId
     const updates = await request.json()
 
-    // Find and update assignment
-    const assignmentIndex = assignments.findIndex(a => a.id === assignmentId)
-    
-    if (assignmentIndex === -1) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
-    }
-
-    // Update assignment
-    assignments[assignmentIndex] = {
-      ...assignments[assignmentIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }
-
-    return NextResponse.json(assignments[assignmentIndex])
+    const assignment = await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: updates,
+    })
+    return NextResponse.json(assignment)
   } catch (error) {
     console.error('Error updating assignment:', error)
     return NextResponse.json({ error: 'Failed to update assignment' }, { status: 500 })
@@ -39,16 +27,7 @@ export async function DELETE(
   try {
     const assignmentId = params.assignmentId
 
-    // Find and delete assignment
-    const assignmentIndex = assignments.findIndex(a => a.id === assignmentId)
-    
-    if (assignmentIndex === -1) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
-    }
-
-    // Remove assignment
-    assignments.splice(assignmentIndex, 1)
-
+    await prisma.assignment.delete({ where: { id: assignmentId } })
     return NextResponse.json({ message: 'Assignment deleted successfully' })
   } catch (error) {
     console.error('Error deleting assignment:', error)

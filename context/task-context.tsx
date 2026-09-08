@@ -23,6 +23,7 @@ export interface Task {
   isRecurring?: boolean
   workspaceId?: string
   assignedTo?: string
+  subtasks?: { total: number; completed: number }
 }
 
 interface TaskContextType {
@@ -97,6 +98,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date(task.updatedAt),
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
         completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
+        subtasks: task.subtasks || { total: 0, completed: 0 },
       }))
       
       setTasks(tasksWithDates)

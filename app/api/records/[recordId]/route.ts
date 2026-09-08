@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock database for records
-let records: any[] = []
+import prisma from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
@@ -11,21 +9,16 @@ export async function PUT(
     const recordId = params.recordId
     const updates = await request.json()
 
-    // Find and update record
-    const recordIndex = records.findIndex(r => r.id === recordId)
-    
-    if (recordIndex === -1) {
-      return NextResponse.json({ error: 'Record not found' }, { status: 404 })
-    }
-
-    // Update record
-    records[recordIndex] = {
-      ...records[recordIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }
-
-    return NextResponse.json(records[recordIndex])
+    const record = await prisma.medicalRecord.update({
+      where: { id: recordId },
+      data: {
+        ...(updates.patient !== undefined && { patient: updates.patient }),
+        ...(updates.type !== undefined && { type: updates.type }),
+        ...(updates.date !== undefined && { date: updates.date }),
+        ...(updates.status !== undefined && { status: updates.status }),
+      },
+    })
+    return NextResponse.json(record)
   } catch (error) {
     console.error('Error updating record:', error)
     return NextResponse.json({ error: 'Failed to update record' }, { status: 500 })
@@ -39,16 +32,7 @@ export async function DELETE(
   try {
     const recordId = params.recordId
 
-    // Find and delete record
-    const recordIndex = records.findIndex(r => r.id === recordId)
-    
-    if (recordIndex === -1) {
-      return NextResponse.json({ error: 'Record not found' }, { status: 404 })
-    }
-
-    // Remove record
-    records.splice(recordIndex, 1)
-
+    await prisma.medicalRecord.delete({ where: { id: recordId } })
     return NextResponse.json({ message: 'Record deleted successfully' })
   } catch (error) {
     console.error('Error deleting record:', error)

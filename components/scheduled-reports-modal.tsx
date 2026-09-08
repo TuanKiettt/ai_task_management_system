@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,32 +72,15 @@ const sampleRecipients = [
 ]
 
 export function ScheduledReportsModal({ open, onOpenChange, userId, workspaceId }: ScheduledReportsModalProps) {
-  const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([
-    {
-      id: "1",
-      name: "Weekly Analytics",
-      description: "Weekly performance summary for the team",
-      reportType: "analytics",
-      frequency: "weekly",
-      recipients: ["user1", "user2"],
-      format: "pdf",
-      nextRun: "2026-05-12T09:00:00Z",
-      isActive: true,
-      createdAt: "2026-05-05T10:00:00Z"
-    },
-    {
-      id: "2", 
-      name: "Monthly Team Report",
-      description: "Monthly team performance metrics",
-      reportType: "team",
-      frequency: "monthly",
-      recipients: ["user1", "user2", "user3"],
-      format: "pdf",
-      nextRun: "2026-06-01T09:00:00Z",
-      isActive: true,
-      createdAt: "2026-05-01T14:00:00Z"
-    }
-  ])
+  const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([])
+
+  useEffect(() => {
+    if (!open || !userId) return
+    fetch(`/api/scheduled-reports?userId=${userId}${workspaceId ? `&workspaceId=${workspaceId}` : ''}`)
+      .then(response => response.json())
+      .then(data => setScheduledReports(data.reports || []))
+      .catch(error => console.error('Error loading scheduled reports:', error))
+  }, [open, userId, workspaceId])
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingReport, setEditingReport] = useState<ScheduledReport | null>(null)
@@ -157,6 +140,7 @@ export function ScheduledReportsModal({ open, onOpenChange, userId, workspaceId 
       })
 
       if (response.ok) {
+        const result = await response.json()
         // For now, just update local state
         if (editingReport) {
           setScheduledReports(prev => prev.map(r => 
@@ -165,14 +149,7 @@ export function ScheduledReportsModal({ open, onOpenChange, userId, workspaceId 
               : r
           ))
         } else {
-          const newReport: ScheduledReport = {
-            id: Date.now().toString(),
-            ...formData,
-            nextRun: calculateNextRun(formData.frequency),
-            isActive: true,
-            createdAt: new Date().toISOString()
-          }
-          setScheduledReports(prev => [...prev, newReport])
+          setScheduledReports(prev => [result.report, ...prev])
         }
         
         setShowCreateForm(false)
@@ -188,14 +165,13 @@ export function ScheduledReportsModal({ open, onOpenChange, userId, workspaceId 
 
   const handleToggleActive = async (reportId: string) => {
     try {
-      const response = await fetch(`/api/scheduled-reports/${reportId}/toggle`, {
+      const response = await fetch(`/api/scheduled-reports/${reportId}`, {
         method: 'PATCH'
       })
 
       if (response.ok) {
-        setScheduledReports(prev => prev.map(r => 
-          r.id === reportId ? { ...r, isActive: !r.isActive } : r
-        ))
+        const result = await response.json()
+        setScheduledReports(prev => prev.map(r => r.id === reportId ? result.report : r))
       }
     } catch (error) {
       console.error("Error toggling report:", error)

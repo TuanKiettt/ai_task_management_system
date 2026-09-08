@@ -13,8 +13,7 @@
   :root {
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
-    
-    /* ClickUp Light Theme */
+
     --background: 0 0% 98%;
     --foreground: 220 13% 18%;
     --card: 0 0% 100%;
@@ -40,8 +39,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    
-    /* ClickUp Sidebar - Light mode uses a subtle gray tone */
+
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 13% 30%;
     --sidebar-primary: 262 83% 58%;
@@ -50,8 +48,7 @@
     --sidebar-accent-foreground: 220 13% 18%;
     --sidebar-border: 220 13% 88%;
     --sidebar-ring: 262 83% 58%;
-    
-    /* ClickUp Custom Colors */
+
     --clickup-purple: 262 83% 58%;
     --clickup-sidebar: 252 47% 11%;
     --clickup-hover: 252 47% 16%;
@@ -63,39 +60,39 @@
   }
 
   .dark {
-    --background: 224 47% 7%;
-    --foreground: 0 0% 95%;
-    --card: 224 47% 11%;
-    --card-foreground: 0 0% 95%;
-    --popover: 224 47% 11%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 262 83% 58%;
+    --background: 222 22% 10%;
+    --foreground: 210 20% 96%;
+    --card: 222 20% 14%;
+    --card-foreground: 210 20% 96%;
+    --popover: 222 20% 14%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 258 85% 66%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 224 47% 15%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 224 47% 15%;
-    --muted-foreground: 220 9% 60%;
-    --accent: 262 83% 58%;
+    --secondary: 222 18% 19%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 222 18% 19%;
+    --muted-foreground: 215 14% 68%;
+    --accent: 258 85% 66%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 224 30% 18%;
-    --input: 224 30% 18%;
-    --ring: 262 83% 58%;
-    --chart-1: 262 83% 58%;
+    --border: 220 16% 25%;
+    --input: 220 16% 25%;
+    --ring: 258 85% 66%;
+    --chart-1: 258 85% 66%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    
-    --sidebar-background: 252 47% 8%;
-    --sidebar-foreground: 240 5% 84%;
-    --sidebar-primary: 262 83% 58%;
+
+    --sidebar-background: 224 26% 9%;
+    --sidebar-foreground: 215 16% 82%;
+    --sidebar-primary: 258 85% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 252 47% 14%;
-    --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 252 30% 16%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 224 22% 16%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 220 18% 21%;
+    --sidebar-ring: 258 85% 66%;
   }
 }
 
@@ -103,26 +100,62 @@
   * {
     border-color: hsl(var(--border));
   }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
 }
 
-/* ClickUp-style scrollbar */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
     border-radius: 3px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Keep legacy Tailwind colors aligned with the dark palette. */
+  .dark .bg-white {
+    background-color: hsl(var(--card));
+  }
+
+  .dark .bg-gray-50 {
+    background-color: hsl(var(--background));
+  }
+
+  .dark .bg-gray-100 {
+    background-color: hsl(var(--muted));
+  }
+
+  .dark .text-gray-900,
+  .dark .text-gray-800 {
+    color: hsl(var(--foreground));
+  }
+
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-gray-500 {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .dark .border-gray-200,
+  .dark .border-gray-300 {
+    border-color: hsl(var(--border));
+  }
+
+  .dark .hover\:bg-gray-50:hover {
+    background-color: hsl(var(--muted));
   }
 }
