@@ -39,16 +39,17 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  const getCurrentUserId = () => {
-    return userId || "demo-user"
-  }
-
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const currentUserId = getCurrentUserId()
+      if (!userId) {
+        setRecords([])
+        return
+      }
+
+      const currentUserId = userId
       const response = await fetch(`/api/records?userId=${currentUserId}`)
       
       if (!response.ok) {
@@ -60,59 +61,7 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('Error fetching records:', err)
       setError(err instanceof Error ? err.message : 'Failed to load records')
-      // Set fallback data for demo
-      setRecords([
-        {
-          id: "1",
-          userId: getCurrentUserId(),
-          patient: "John Anderson",
-          type: "Lab Results",
-          date: "Jan 18, 2026",
-          status: "Completed",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "2",
-          userId: getCurrentUserId(),
-          patient: "Maria Garcia",
-          type: "X-Ray Report",
-          date: "Jan 18, 2026",
-          status: "Pending Review",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3",
-          userId: getCurrentUserId(),
-          patient: "David Kim",
-          type: "Prescription",
-          date: "Jan 17, 2026",
-          status: "Completed",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "4",
-          userId: getCurrentUserId(),
-          patient: "Sarah Johnson",
-          type: "Surgery Notes",
-          date: "Jan 18, 2026",
-          status: "Completed",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "5",
-          userId: getCurrentUserId(),
-          patient: "Michael Brown",
-          type: "Blood Test",
-          date: "Jan 16, 2026",
-          status: "In Progress",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ])
+      setRecords([])
     } finally {
       setLoading(false)
     }
@@ -120,19 +69,13 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
 
   const addRecord = useCallback(async (record: Omit<Record, "id" | "createdAt" | "updatedAt">) => {
     try {
-      const newRecord = {
-        ...record,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
+      if (!userId) throw new Error('Authentication required')
       const response = await fetch('/api/records', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newRecord),
+        body: JSON.stringify({ ...record, userId }),
       })
 
       if (!response.ok) {
@@ -143,14 +86,8 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
       setRecords(prev => [savedRecord, ...prev])
     } catch (err) {
       console.error('Error adding record:', err)
-      // Fallback: add to local state
-      const newRecord = {
-        ...record,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      setRecords(prev => [newRecord, ...prev])
+      setError(err instanceof Error ? err.message : 'Failed to add record')
+      throw err
     }
   }, [])
 
@@ -182,14 +119,8 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
       )
     } catch (err) {
       console.error('Error updating record:', err)
-      // Fallback: update local state
-      setRecords(prev => 
-        prev.map(record => 
-          record.id === id 
-            ? { ...record, ...updates, updatedAt: new Date() }
-            : record
-        )
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update record')
+      throw err
     }
   }, [])
 
@@ -206,8 +137,8 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
       setRecords(prev => prev.filter(record => record.id !== id))
     } catch (err) {
       console.error('Error deleting record:', err)
-      // Fallback: remove from local state
-      setRecords(prev => prev.filter(record => record.id !== id))
+      setError(err instanceof Error ? err.message : 'Failed to delete record')
+      throw err
     }
   }, [])
 

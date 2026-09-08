@@ -42,16 +42,17 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId, industry } = useUser()
 
-  const getCurrentUserId = () => {
-    return userId || "demo-user"
-  }
-
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const currentUserId = getCurrentUserId()
+      if (!userId) {
+        setProjects([])
+        return
+      }
+
+      const currentUserId = userId
       const response = await fetch(`/api/projects?userId=${currentUserId}&industry=${industry || 'corporate'}`)
       
       if (!response.ok) {
@@ -63,77 +64,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('Error fetching projects:', err)
       setError(err instanceof Error ? err.message : 'Failed to load projects')
-      // Set fallback data for demo
-      const fallbackProjects = industry === "corporate" ? [
-        {
-          id: "1",
-          userId: getCurrentUserId(),
-          name: "Digital Transformation Initiative",
-          status: "In Progress" as const,
-          progress: 65,
-          team: 8,
-          deadline: "May 30, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { 
-          id: "2", 
-          userId: getCurrentUserId(),
-          name: "Market Expansion Q2", 
-          status: "Planning" as const, 
-          progress: 25, 
-          team: 5, 
-          deadline: "Jun 15, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { 
-          id: "3", 
-          userId: getCurrentUserId(),
-          name: "Product Launch Campaign", 
-          status: "In Progress" as const, 
-          progress: 80, 
-          team: 12, 
-          deadline: "May 20, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ] : [
-        { 
-          id: "4", 
-          userId: getCurrentUserId(),
-          name: "Brand Identity Redesign", 
-          status: "In Progress" as const, 
-          progress: 70, 
-          team: 4, 
-          deadline: "May 25, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { 
-          id: "5", 
-          userId: getCurrentUserId(),
-          name: "Social Media Campaign", 
-          status: "Review" as const, 
-          progress: 90, 
-          team: 3, 
-          deadline: "May 15, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { 
-          id: "6", 
-          userId: getCurrentUserId(),
-          name: "Website Mockups", 
-          status: "In Progress" as const, 
-          progress: 45, 
-          team: 2, 
-          deadline: "Jun 1, 2025",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]
-      setProjects(fallbackProjects)
+      setProjects([])
     } finally {
       setLoading(false)
     }
@@ -141,19 +72,13 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
   const addProject = useCallback(async (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => {
     try {
-      const newProject = {
-        ...project,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
+      if (!userId) throw new Error('Authentication required')
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newProject),
+        body: JSON.stringify({ ...project, userId }),
       })
 
       if (!response.ok) {
@@ -164,14 +89,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       setProjects(prev => [savedProject, ...prev])
     } catch (err) {
       console.error('Error adding project:', err)
-      // Fallback: add to local state
-      const newProject = {
-        ...project,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      setProjects(prev => [newProject, ...prev])
+      setError(err instanceof Error ? err.message : 'Failed to add project')
+      throw err
     }
   }, [])
 
@@ -203,14 +122,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       )
     } catch (err) {
       console.error('Error updating project:', err)
-      // Fallback: update local state
-      setProjects(prev => 
-        prev.map(project => 
-          project.id === id 
-            ? { ...project, ...updates, updatedAt: new Date() }
-            : project
-        )
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update project')
+      throw err
     }
   }, [])
 
@@ -227,8 +140,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       setProjects(prev => prev.filter(project => project.id !== id))
     } catch (err) {
       console.error('Error deleting project:', err)
-      // Fallback: remove from local state
-      setProjects(prev => prev.filter(project => project.id !== id))
+      setError(err instanceof Error ? err.message : 'Failed to delete project')
+      throw err
     }
   }, [])
 

@@ -56,11 +56,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       
       const response = await fetch(`/api/conversations?userId=${userId}`)
       if (!response.ok) {
-        // If API fails, fallback to empty conversations
-        console.warn("API failed, using empty conversations")
-        setConversations([])
-        setLoading(false)
-        return
+        throw new Error("Failed to fetch conversations")
       }
       
       const conversationsData = await response.json()
@@ -78,10 +74,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       
       setConversations(conversationsWithDates)
     } catch (err) {
-      // Fallback: Don't show error, just use empty conversations
-      console.warn("Failed to fetch conversations, using empty state:", err)
       setConversations([])
-      setError(null) // Clear error to not break UI
+      setError(err instanceof Error ? err.message : "Failed to fetch conversations")
     } finally {
       setLoading(false)
     }
@@ -159,18 +153,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // If no current conversation, create one first
     if (!conversationId) {
       if (!userId) {
-        // Fallback: Create mock conversation in memory only
-        const mockConversation: ChatConversation = {
-          id: `mock-${Date.now()}`,
-          title: `Chat ${new Date().toLocaleDateString()}`,
-          messages: [message],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-        
-        setConversations(prev => [...prev, mockConversation])
-        setCurrentConversationId(mockConversation.id)
-        return
+        throw new Error("Authentication required")
       }
       
       try {
@@ -186,19 +169,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
         
         if (!response.ok) {
-          // Fallback: Create mock conversation if API fails
-          console.warn("Failed to create conversation, using mock")
-          const mockConversation: ChatConversation = {
-            id: `mock-${Date.now()}`,
-            title: `Chat ${new Date().toLocaleDateString()}`,
-            messages: [message],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-          
-          setConversations(prev => [...prev, mockConversation])
-          setCurrentConversationId(mockConversation.id)
-          return
+          throw new Error("Failed to create conversation")
         }
         
         const newConversation = await response.json()

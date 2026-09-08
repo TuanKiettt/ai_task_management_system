@@ -45,17 +45,15 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  // Get current user ID from user context
-  const getCurrentUserId = () => {
-    return userId || "demo-user" // Fallback for demo purposes
-  }
-
   // Fetch courses from database
   const fetchCourses = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const userId = getCurrentUserId()
+      if (!userId) {
+        setCourses([])
+        return
+      }
       
       const response = await fetch(`/api/courses?userId=${userId}`)
       if (!response.ok) {

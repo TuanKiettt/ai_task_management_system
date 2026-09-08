@@ -61,20 +61,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  // Get current user ID from user context
-  const getCurrentUserId = () => {
-    return userId || "demo-user" // Fallback for demo purposes
-  }
-
   // Fetch tasks from database
   const fetchTasks = useCallback(async (workspaceId?: string) => {
     try {
       setLoading(true)
       setError(null)
-      const userId = getCurrentUserId()
-      
       if (!userId) {
-        console.error("No user ID available")
         setTasks([])
         return
       }
@@ -116,21 +108,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [fetchTasks])
 
   const addTask = useCallback(async (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "userId">) => {
-    if (!userId) {
-      // Fallback: Add task to local state when no userId
-      const localTask: Task = {
-        id: crypto.randomUUID(),
-        ...task,
-        userId: 'local-user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        status: task.status || 'new'
-      }
-      
-      setTasks(prev => [localTask, ...prev])
-      console.log('Task added to local state (no user ID):', localTask.title)
-      return
-    }
+    if (!userId) throw new Error('Authentication required')
 
     try {
       setError(null)
@@ -143,38 +121,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ ...task, userId }),
       })
       
-      if (!response.ok) {
-        // Fallback: Add to local state if API fails
-        console.warn('API failed, adding task to local state')
-        const localTask: Task = {
-          id: crypto.randomUUID(),
-          ...task,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          status: task.status || 'new'
-        }
-        
-        setTasks(prev => [localTask, ...prev])
-        return
-      }
+      if (!response.ok) throw new Error('Failed to create task')
       
       // Refresh tasks after adding
       await fetchTasks()
     } catch (err) {
-      // Fallback: Add to local state if error occurs
-      console.warn('Error adding task, using local state:', err)
-      const localTask: Task = {
-        id: crypto.randomUUID(),
-        ...task,
-        userId: userId || 'local-user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        status: task.status || 'new'
-      }
-      
-      setTasks(prev => [localTask, ...prev])
-      setError(null) // Clear error to not break UI
+      setError(err instanceof Error ? err.message : 'Failed to create task')
+      throw err
     }
   }, [userId, fetchTasks])
 

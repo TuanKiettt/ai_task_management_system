@@ -8,7 +8,7 @@ import { useState } from "react"
 import { useProjects, type Project } from "@/context/projects-context"
 
 export default function ProjectsPage() {
-  const { industry } = useUser()
+  const { industry, userId } = useUser()
   const { projects, addProject, updateProject, deleteProject, loading, error } = useProjects()
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -22,7 +22,7 @@ export default function ProjectsPage() {
         progress: 0,
         team: parseInt(newProject.team),
         deadline: new Date(newProject.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        userId: "demo-user", // This should come from user context
+        userId: userId || "",
       })
       setNewProject({ name: "", team: "3", deadline: "" })
       setShowAddModal(false)

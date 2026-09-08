@@ -61,10 +61,6 @@ export function CommentProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  const getCurrentUserId = () => {
-    return userId || "demo-user"
-  }
-
   // Fetch comments for a task
   const fetchComments = useCallback(async (taskId?: string) => {
     if (!userId) return
@@ -73,7 +69,7 @@ export function CommentProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      let url = `/api/comments?userId=${getCurrentUserId()}`
+      let url = `/api/comments?userId=${userId}`
       if (taskId) {
         url += `&taskId=${taskId}`
       }

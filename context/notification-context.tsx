@@ -40,7 +40,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const fetchNotifications = useCallback(async () => {
     if (!userId) {
-      // Fallback: Show demo notifications when no user
+      setNotifications([])
+      setLoading(false)
+      return
+      // Legacy demo data retained below is unreachable and will be removed in cleanup.
       const demoNotifications: Notification[] = [
         {
           id: "demo-1",
@@ -95,23 +98,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       
       const response = await fetch(`/api/notifications?userId=${userId}`)
       if (!response.ok) {
-        // Fallback to demo notifications if API fails
-        console.warn('API failed, using demo notifications')
-        const demoNotifications: Notification[] = [
-          {
-            id: "demo-api-fallback",
-            title: "Connection Issue",
-            message: "Unable to connect to server. Showing demo notifications instead.",
-            type: "warning",
-            read: false,
-            createdAt: new Date(),
-            timestamp: Date.now(),
-            category: "system"
-          }
-        ]
-        setNotifications(demoNotifications)
-        setLoading(false)
-        return
+        throw new Error('Failed to fetch notifications')
       }
       
       const notificationsData = await response.json()
@@ -139,20 +126,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setError(err instanceof Error ? err.message : "An error occurred")
       console.error("Failed to fetch notifications:", err)
       
-      // Fallback to demo notifications on error
-      const demoNotifications: Notification[] = [
-        {
-          id: "demo-error-fallback",
-          title: "Demo Mode Active",
-          message: "Using demo notifications due to connection issues. Your notifications will be saved when connection is restored.",
-          type: "info",
-          read: false,
-          createdAt: new Date(),
-          timestamp: Date.now(),
-          category: "system"
-        }
-      ]
-      setNotifications(demoNotifications)
+      setNotifications([])
     } finally {
       setLoading(false)
     }
@@ -167,18 +141,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const addNotification = useCallback(async (notification: Omit<Notification, "id" | "read" | "createdAt" | "timestamp">) => {
     if (!userId) {
-      // Fallback: Add notification to local state when no user
-      const newNotification: Notification = {
-        ...notification,
-        id: `local-${Date.now()}`,
-        read: false,
-        createdAt: new Date(),
-        timestamp: Date.now(),
-      }
-      
-      setNotifications(prev => [newNotification, ...prev])
-      console.log('Notification added to local state:', newNotification.title)
-      return
+      throw new Error('Authentication required')
     }
 
     try {
@@ -193,18 +156,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       })
       
       if (!response.ok) {
-        // Fallback: Add to local state if API fails
-        console.warn('API failed, adding notification to local state')
-        const newNotification: Notification = {
-          ...notification,
-          id: `fallback-${Date.now()}`,
-          read: false,
-          createdAt: new Date(),
-          timestamp: Date.now(),
-        }
-        
-        setNotifications(prev => [newNotification, ...prev])
-        return
+        throw new Error('Failed to create notification')
       }
       
       // Refresh notifications after adding
@@ -213,17 +165,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setError(err instanceof Error ? err.message : "Failed to create notification")
       console.error("Failed to add notification:", err)
       
-      // Fallback: Add to local state on error
-      const newNotification: Notification = {
-        ...notification,
-        id: `error-${Date.now()}`,
-        read: false,
-        createdAt: new Date(),
-        timestamp: Date.now(),
-      }
-      
-      setNotifications(prev => [newNotification, ...prev])
-      setError(null) // Clear error to not break UI
+      throw err
     }
   }, [userId, fetchNotifications])
 

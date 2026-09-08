@@ -42,18 +42,18 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  // Get current user ID from user context
-  const getCurrentUserId = () => {
-    return userId || "demo-user" // Fallback for demo purposes
-  }
-
   // Fetch assignments from database
   const fetchAssignments = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const currentUserId = getCurrentUserId()
+      if (!userId) {
+        setAssignments([])
+        return
+      }
+
+      const currentUserId = userId
       const response = await fetch(`/api/assignments?userId=${currentUserId}`)
       
       if (!response.ok) {
@@ -65,60 +65,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     } catch (err) {
       console.error('Error fetching assignments:', err)
       setError(err instanceof Error ? err.message : 'Failed to load assignments')
-      // Set fallback data for demo
-      setAssignments([
-        {
-          id: "1",
-          userId: getCurrentUserId(),
-          title: "Research Paper: Climate Change",
-          subject: "Science",
-          dueDate: "Jan 28, 2026",
-          status: "pending",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "2",
-          userId: getCurrentUserId(),
-          title: "Math Problem Set 12",
-          subject: "Mathematics",
-          dueDate: "Jan 25, 2026",
-          status: "submitted",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3",
-          userId: getCurrentUserId(),
-          title: "Book Report: To Kill a Mockingbird",
-          subject: "English",
-          dueDate: "Jan 22, 2026",
-          status: "graded",
-          grade: "A",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "4",
-          userId: getCurrentUserId(),
-          title: "History Essay: World War II",
-          subject: "History",
-          dueDate: "Jan 20, 2026",
-          status: "overdue",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "5",
-          userId: getCurrentUserId(),
-          title: "Lab Report: Chemical Reactions",
-          subject: "Chemistry",
-          dueDate: "Jan 30, 2026",
-          status: "pending",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ])
+      setAssignments([])
     } finally {
       setLoading(false)
     }
@@ -127,20 +74,13 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   // Add new assignment
   const addAssignment = useCallback(async (assignment: Omit<Assignment, "id" | "createdAt" | "updatedAt">) => {
     try {
-      const newAssignment = {
-        ...assignment,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
-      // Try to save to database
+      if (!userId) throw new Error('Authentication required')
       const response = await fetch('/api/assignments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newAssignment),
+        body: JSON.stringify({ ...assignment, userId }),
       })
 
       if (!response.ok) {
@@ -151,14 +91,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       setAssignments(prev => [savedAssignment, ...prev])
     } catch (err) {
       console.error('Error adding assignment:', err)
-      // Fallback: add to local state
-      const newAssignment = {
-        ...assignment,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      setAssignments(prev => [newAssignment, ...prev])
+      setError(err instanceof Error ? err.message : 'Failed to add assignment')
+      throw err
     }
   }, [])
 
@@ -193,14 +127,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       )
     } catch (err) {
       console.error('Error updating assignment:', err)
-      // Fallback: update local state
-      setAssignments(prev => 
-        prev.map(assignment => 
-          assignment.id === id 
-            ? { ...assignment, ...updates, updatedAt: new Date() }
-            : assignment
-        )
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update assignment')
+      throw err
     }
   }, [])
 
@@ -220,8 +148,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       setAssignments(prev => prev.filter(assignment => assignment.id !== id))
     } catch (err) {
       console.error('Error deleting assignment:', err)
-      // Fallback: remove from local state
-      setAssignments(prev => prev.filter(assignment => assignment.id !== id))
+      setError(err instanceof Error ? err.message : 'Failed to delete assignment')
+      throw err
     }
   }, [])
 

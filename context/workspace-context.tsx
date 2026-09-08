@@ -159,14 +159,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
-  const getCurrentUserId = () => {
-    return userId || "demo-user-123"
-  }
-
   // Fetch all user workspaces
   const fetchWorkspaces = useCallback(async () => {
-    const currentUserId = getCurrentUserId()
-    if (!currentUserId) return
+    if (!userId) {
+      setWorkspaces([])
+      return
+    }
+
+    const currentUserId = userId
 
     try {
       setError(null)
@@ -193,11 +193,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch current workspace
   const fetchCurrentWorkspace = useCallback(async () => {
-    const currentUserId = getCurrentUserId()
-    if (!currentUserId) {
+    if (!userId) {
+      setCurrentWorkspace(null)
       setLoading(false)
       return
     }
+
+    const currentUserId = userId
 
     try {
       setLoading(true)

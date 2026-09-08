@@ -61,10 +61,6 @@ export function SubtaskProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  const getCurrentUserId = () => {
-    return userId || "demo-user"
-  }
-
   // Fetch subtasks
   const fetchSubtasks = useCallback(async (parentTaskId?: string) => {
     if (!userId) return
@@ -73,7 +69,7 @@ export function SubtaskProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      let url = `/api/subtasks?userId=${getCurrentUserId()}`
+      let url = `/api/subtasks?userId=${userId}`
       if (parentTaskId) {
         url += `&parentTaskId=${parentTaskId}`
       }

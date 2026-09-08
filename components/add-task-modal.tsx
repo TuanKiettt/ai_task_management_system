@@ -96,7 +96,6 @@ export function AddTaskModal({ onAddTask }: AddTaskModalProps) {
         id: crypto.randomUUID(),
         createdAt: new Date(),
         updatedAt: new Date(),
-        userId: "demo-user", // Should get from user context
       }
       
       // Add task to task list

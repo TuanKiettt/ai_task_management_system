@@ -40,40 +40,18 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { userId } = useUser()
 
-  // Get current user ID from user context
-  const getCurrentUserId = () => {
-    return userId || "demo-user" // Fallback for demo purposes
-  }
-
   // Fetch entries from database
   const fetchEntries = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const userId = getCurrentUserId()
-      
-      const response = await fetch(`/api/timetable?userId=${userId}`)
-      if (!response.ok) {
-        // Fallback to demo entries if API fails
-        console.warn('API failed, using demo timetable entries')
-        const demoEntries: TimetableEntry[] = [
-          {
-            id: "demo-api-fallback",
-            userId: "demo-user",
-            dayOfWeek: 1,
-            startTime: "09:00",
-            endTime: "10:00",
-            subject: "Demo Session (API Unavailable)",
-            location: "Virtual",
-            color: "#6B7280",
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-        ]
-        setEntries(demoEntries)
-        setLoading(false)
+      if (!userId) {
+        setEntries([])
         return
       }
+      
+      const response = await fetch(`/api/timetable?userId=${userId}`)
+      if (!response.ok) throw new Error('Failed to fetch timetable entries')
       
       const entriesData = await response.json()
       
@@ -89,23 +67,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       setError(err instanceof Error ? err.message : "An error occurred")
       console.error("Failed to fetch timetable entries:", err)
       
-      // Fallback to demo entries on error
-      const demoEntries: TimetableEntry[] = [
-        {
-          id: "demo-error-fallback",
-          userId: "demo-user",
-          dayOfWeek: 1,
-          startTime: "09:00",
-          endTime: "10:00",
-          subject: "Demo Mode (Connection Error)",
-          location: "Offline",
-          color: "#6B7280",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ]
-      setEntries(demoEntries)
-      setError(null) // Clear error to not break UI
+      setEntries([])
     } finally {
       setLoading(false)
     }
@@ -113,90 +75,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   // Load entries on mount
   useEffect(() => {
-    if (userId) {
-      fetchEntries()
-    } else {
-      // Fallback: Show demo timetable when no user
-      const demoEntries: TimetableEntry[] = [
-        {
-          id: "demo-1",
-          userId: "demo-user",
-          dayOfWeek: 1, // Monday
-          startTime: "09:00",
-          endTime: "10:30",
-          subject: "AI Presentation Prep",
-          location: "Conference Room A",
-          color: "#3B82F6",
-          taskId: "task-1",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "demo-2",
-          userId: "demo-user",
-          dayOfWeek: 1, // Monday
-          startTime: "11:00",
-          endTime: "12:00",
-          subject: "Team Meeting",
-          location: "Virtual",
-          color: "#10B981",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "demo-3",
-          userId: "demo-user",
-          dayOfWeek: 2, // Tuesday
-          startTime: "14:00",
-          endTime: "16:00",
-          subject: "Project Review",
-          location: "Office",
-          color: "#F59E0B",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "demo-4",
-          userId: "demo-user",
-          dayOfWeek: 3, // Wednesday
-          startTime: "10:00",
-          endTime: "11:30",
-          subject: "Client Call",
-          location: "Online",
-          color: "#EF4444",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "demo-5",
-          userId: "demo-user",
-          dayOfWeek: 4, // Thursday
-          startTime: "15:00",
-          endTime: "17:00",
-          subject: "Development Workshop",
-          location: "Training Room",
-          color: "#8B5CF6",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "demo-6",
-          userId: "demo-user",
-          dayOfWeek: 5, // Friday
-          startTime: "09:30",
-          endTime: "11:00",
-          subject: "Sprint Planning",
-          location: "Conference Room B",
-          color: "#EC4899",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ]
-      
-      setEntries(demoEntries)
-      setLoading(false)
-      console.log('Using demo timetable entries')
-    }
+    fetchEntries()
   }, [fetchEntries, userId])
 
   const addEntry = useCallback(async (entry: Omit<TimetableEntry, "id" | "createdAt" | "updatedAt">) => {
@@ -211,19 +90,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(entry),
       })
       
-      if (!response.ok) {
-        // Fallback: Add to local state if API fails
-        console.warn('API failed, adding entry to local state')
-        const newEntry: TimetableEntry = {
-          ...entry,
-          id: `local-${Date.now()}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-        
-        setEntries(prev => [...prev, newEntry])
-        return
-      }
+      if (!response.ok) throw new Error('Failed to create timetable entry')
       
       // Refresh entries after adding
       await fetchEntries()
@@ -231,16 +98,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       setError(err instanceof Error ? err.message : "Failed to create timetable entry")
       console.error("Failed to add timetable entry:", err)
       
-      // Fallback: Add to local state on error
-      const newEntry: TimetableEntry = {
-        ...entry,
-        id: `error-${Date.now()}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      
-      setEntries(prev => [...prev, newEntry])
-      setError(null) // Clear error to not break UI
+      throw err
     }
   }, [fetchEntries])
 
@@ -300,7 +158,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Authentication required')
       
       // Create timetable entry from task
       const timetableEntry: Omit<TimetableEntry, "id" | "createdAt" | "updatedAt"> = {

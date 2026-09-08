@@ -7,10 +7,12 @@ import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { useRecords, type Record } from "@/context/records-context"
+import { useUser } from "@/context/user-context"
 import Loading from "./loading"
 
 function RecordsPageContent() {
   const { records, addRecord, updateRecord, deleteRecord, loading, error } = useRecords()
+  const { userId } = useUser()
   const searchParams = useSearchParams()
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -30,7 +32,7 @@ function RecordsPageContent() {
         type: newRecord.type,
         date: new Date(newRecord.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         status: "In Progress",
-        userId: "demo-user", // This should come from user context
+        userId: userId || "",
       })
       setNewRecord({ patient: "", type: "", date: "" })
       setShowAddModal(false)
